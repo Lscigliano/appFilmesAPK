@@ -45,7 +45,7 @@ que ficou pronto. Níveis de prova (N1..N4) definidos em `docs/PROTOCOLO.md`, §
 
 ## Fase 4 — Distribuição
 
-- [ ] CI publica APK em Releases a cada push na `main`
+- [x] CI publica APK em Releases a cada push na `main` ✅ 2026-10-28
       *Prova:* link do release com o `.apk` anexado.
 - [ ] Criar chave de assinatura própria e guardar como secret do GitHub
       (hoje o release sai assinado com a chave de debug — instala, mas não

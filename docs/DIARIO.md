@@ -8,6 +8,41 @@
 
 ---
 
+## [2026-10-28] CI verde e APK publicado — quatro armadilhas no caminho
+**Quem:** Claude Opus 5
+
+**Situação:** O build passava na máquina local, mas o CI falhou quatro vezes
+seguidas, cada vez num passo diferente.
+
+**As quatro falhas, em ordem:**
+1. A checagem "o plugin kotlin.android não voltou" acusou **o próprio comentário**
+   em `build.gradle.kts` que avisa para não usar o plugin. Corrigido para procurar
+   o plugin sendo *aplicado* (`id(...)`, `alias(...)`), ignorando comentários.
+2. `android-actions/setup-android@v3` quebra sozinha: tenta instalar o pacote
+   `tools`, que o Google removeu ("Failed to find package 'tools'"). Removida — o
+   runner já traz o SDK.
+3. O `sdkmanager` do runner **também** não enxerga a `platforms;android-37` —
+   mesma limitação da máquina local (entende SDK XML até v3, o pacote está na v4).
+   Resolvido do mesmo jeito: baixar `platform-37.0_r02.zip` de `dl.google.com` e
+   escrever o `source.properties` à mão.
+4. `./gradlew: Permission denied` — o Windows não grava o bit de execução, então o
+   runner Linux recebia o arquivo sem permissão. `git update-index --chmod=+x`.
+
+**Resultado:** build de 5m01s, verde, com release publicado automaticamente:
+`arm64-v8a` 77 MB e `armeabi-v7a` 63 MB.
+
+**Aprendizado:**
+1. **"Passa na minha máquina" não diz nada sobre o CI.** Os quatro problemas eram
+   de ambiente, não de código — e nenhum apareceria localmente.
+2. A limitação do `sdkmanager` com a API 37 **não era da máquina do dono**; é da
+   ferramenta. Vale para qualquer lugar onde este projeto for compilado, e por
+   isso a solução virou passo do workflow, não gambiarra local.
+3. Toda checagem automática precisa ser rodada antes de commitar. Duas das quatro
+   falhas eram checagens minhas acusando conteúdo legítimo do próprio repositório.
+
+---
+
+
 ## [2026-10-28] N1 alcançado — e o APK nasceu com 221 MB
 **Quem:** Claude Opus 5
 
