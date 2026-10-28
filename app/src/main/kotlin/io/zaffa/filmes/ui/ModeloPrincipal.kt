@@ -25,6 +25,8 @@ sealed interface Tela {
     data object Carregando : Tela
     data object Login : Tela
     data object Inicio : Tela
+    /** Catálogo na nossa tela, lido da página do painel. */
+    data class Catalogo(val secao: Secao) : Tela
     data class Painel(val url: String, val raiz: String) : Tela
     data class Player(val url: String, val titulo: String) : Tela
 }
@@ -202,11 +204,37 @@ class ModeloPrincipal(aplicacao: Application) : AndroidViewModel(aplicacao) {
         }
     }
 
-    /** Abre o painel já na seção escolhida, pulando o menu do site. */
+    /**
+     * Abre a seção escolhida.
+     *
+     * Filmes e Séries abrem no **nosso** catálogo — são as seções cujo endereço
+     * está confirmado. As demais abrem a página do painel, que segue
+     * funcionando. Quando os outros caminhos forem confirmados, migram para cá.
+     */
     fun abrirSecao(secao: Secao) {
         viewModelScope.launch {
             val base = app.preferencias.urlPainel.first()
-            val url = secao.url(base)
+            raizDoPainel = base
+            val nossoCatalogo = secao == Secao.FILMES || secao == Secao.SERIES
+            if (nossoCatalogo) {
+                _tela.value = Tela.Catalogo(secao)
+            } else {
+                val url = secao.url(base)
+                ultimaPaginaDoPainel = url
+                _tela.value = Tela.Painel(url, base)
+            }
+        }
+    }
+
+    /**
+     * Do nosso catálogo, abre a página de detalhe do título.
+     *
+     * É lá que o play acontece — e o vídeo é capturado para o nosso player,
+     * como já funcionava.
+     */
+    fun abrirItem(url: String) {
+        viewModelScope.launch {
+            val base = app.preferencias.urlPainel.first()
             raizDoPainel = base
             ultimaPaginaDoPainel = url
             _tela.value = Tela.Painel(url, base)

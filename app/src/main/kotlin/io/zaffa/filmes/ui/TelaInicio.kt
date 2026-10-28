@@ -6,26 +6,22 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.filled.VideoLibrary
@@ -48,12 +44,14 @@ import androidx.compose.ui.unit.dp
 /**
  * Tela inicial — a identidade do app.
  *
- * É a única tela 100% nossa na navegação. O catálogo continua sendo a página do
- * painel (decisão do dono): assim as capas, categorias e busca continuam
- * funcionando e atualizadas, sem nós reimplementarmos nada que muda sem aviso.
+ * LAYOUT: os cinco atalhos ficam numa **grade que cabe inteira na tela**, sem
+ * rolagem. A primeira versão usava uma faixa horizontal rolável e, no celular,
+ * só dois cartões apareciam — os outros ficavam cortados fora da vista, que foi
+ * exatamente a reclamação no primeiro uso real.
  *
- * O que esta tela entrega é **entrar direto onde se quer**: tocar em "Filmes"
- * abre o catálogo de filmes, sem passar pelo menu do site.
+ * O catálogo continua sendo a página do painel (decisão do dono): assim as
+ * capas, categorias e busca seguem funcionando e atualizadas. O que esta tela
+ * entrega é **entrar direto onde se quer**, sem passar pelo menu do site.
  */
 @Composable
 fun TelaInicio(
@@ -65,14 +63,10 @@ fun TelaInicio(
         Modifier
             .fillMaxSize()
             .background(
-                // Fundo em degradê, lembrando o céu estrelado da referência,
-                // sem precisar de imagem (que pesaria no APK).
+                // Degradê no lugar de imagem: mesmo clima da referência, sem
+                // peso no APK.
                 Brush.verticalGradient(
-                    listOf(
-                        Color(0xFF130B26),
-                        Cores.Fundo,
-                        Color(0xFF07040F),
-                    ),
+                    listOf(Color(0xFF130B26), Cores.Fundo, Color(0xFF07040F)),
                 ),
             ),
     ) {
@@ -80,106 +74,99 @@ fun TelaInicio(
             Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
-                // Sem o inset de baixo, o texto final fica escondido sob a barra
-                // de navegação em aparelhos com os três botões — `enableEdgeToEdge`
-                // faz o conteúdo ir até a borda da tela.
                 .navigationBarsPadding()
-                .verticalScroll(rememberScrollState()),
+                .padding(horizontal = 16.dp),
         ) {
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(20.dp))
 
             Text(
                 text = "O que vamos assistir?",
-                style = MaterialTheme.typography.headlineLarge,
+                style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.ExtraBold,
                 color = Cores.Texto,
-                modifier = Modifier.padding(horizontal = 20.dp),
             )
-            Spacer(Modifier.height(6.dp))
             Text(
-                text = "TV ao vivo. Filmes. Séries. Tudo num lugar só.",
-                style = MaterialTheme.typography.bodyLarge,
+                text = "TV ao vivo, filmes e séries num lugar só.",
+                style = MaterialTheme.typography.bodyMedium,
                 color = Cores.TextoFraco,
-                modifier = Modifier.padding(horizontal = 20.dp),
             )
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(18.dp))
 
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                items(Secao.entries) { secao ->
-                    CartaoSecao(secao) { aoEscolher(secao) }
+            // Grade de 2 colunas. Com 5 itens, o último ocupa a linha inteira —
+            // fica equilibrado e não sobra buraco.
+            val linhas = Secao.entries.chunked(2)
+            linhas.forEachIndexed { indice, linha ->
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    linha.forEach { secao ->
+                        CartaoSecao(
+                            secao = secao,
+                            modifier = Modifier.weight(1f),
+                            aoClicar = { aoEscolher(secao) },
+                        )
+                    }
                 }
+                if (indice != linhas.lastIndex) Spacer(Modifier.height(10.dp))
             }
 
-            Spacer(Modifier.height(36.dp))
-
-            Text(
-                text = "Acesso rápido",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Cores.Texto,
-                modifier = Modifier.padding(horizontal = 20.dp),
-            )
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(20.dp))
 
             LinhaDeAcesso(
                 titulo = "Abrir o painel completo",
-                descricao = "Busca, categorias e tudo o mais",
+                descricao = "Busca, categorias, rádio e tudo o mais",
                 aoClicar = aoAbrirPainel,
             )
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(8.dp))
 
             LinhaDeAcesso(
                 titulo = "Sair da conta",
                 descricao = "Encerra a sessão neste aparelho",
+                icone = Icons.Filled.Logout,
                 aoClicar = aoSair,
             )
 
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.weight(1f))
 
             Text(
-                text = "Se um filme travar ao avançar, troque o motor de vídeo " +
-                    "no canto superior direito do player.",
+                text = "Travou ao avançar? Toque no nome do motor, no topo do player.",
                 style = MaterialTheme.typography.bodySmall,
                 color = Cores.TextoFraco,
-                modifier = Modifier.padding(horizontal = 20.dp),
+                modifier = Modifier.padding(bottom = 12.dp),
             )
-            Spacer(Modifier.height(24.dp))
         }
     }
 }
 
 @Composable
-private fun CartaoSecao(secao: Secao, aoClicar: () -> Unit) {
+private fun CartaoSecao(
+    secao: Secao,
+    modifier: Modifier = Modifier,
+    aoClicar: () -> Unit,
+) {
     Card(
         onClick = aoClicar,
-        modifier = Modifier
-            .width(172.dp)
-            .height(112.dp),
-        shape = RoundedCornerShape(16.dp),
+        modifier = modifier.height(92.dp),
+        shape = RoundedCornerShape(14.dp),
         border = BorderStroke(1.5.dp, secao.cor.copy(alpha = 0.85f)),
-        colors = CardDefaults.cardColors(
-            containerColor = secao.cor.copy(alpha = 0.10f),
-        ),
+        colors = CardDefaults.cardColors(containerColor = secao.cor.copy(alpha = 0.10f)),
     ) {
-        Row(
+        Column(
             Modifier
                 .fillMaxSize()
-                .padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
         ) {
             Icon(
                 imageVector = iconeDe(secao),
                 contentDescription = null,
                 tint = secao.cor,
-                modifier = Modifier.size(34.dp),
+                modifier = Modifier.size(26.dp),
             )
-            Spacer(Modifier.width(10.dp))
-            Column(Modifier.weight(1f)) {
+            Column {
                 Text(
                     text = secao.titulo,
                     style = MaterialTheme.typography.titleSmall,
@@ -192,42 +179,48 @@ private fun CartaoSecao(secao: Secao, aoClicar: () -> Unit) {
                     text = secao.descricao,
                     style = MaterialTheme.typography.bodySmall,
                     color = Cores.TextoFraco,
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
             }
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = Cores.TextoFraco,
-            )
         }
     }
 }
 
 @Composable
-private fun LinhaDeAcesso(titulo: String, descricao: String, aoClicar: () -> Unit) {
+private fun LinhaDeAcesso(
+    titulo: String,
+    descricao: String,
+    icone: ImageVector? = null,
+    aoClicar: () -> Unit,
+) {
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp)
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(Cores.Superficie)
             .clickable(onClick = aoClicar)
-            .padding(16.dp),
+            .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (icone != null) {
+            Icon(icone, contentDescription = null, tint = Cores.TextoFraco)
+            Spacer(Modifier.width(12.dp))
+        }
         Column(Modifier.weight(1f)) {
             Text(
                 text = titulo,
                 style = MaterialTheme.typography.bodyLarge,
                 fontWeight = FontWeight.SemiBold,
                 color = Cores.Texto,
+                maxLines = 1,
             )
             Text(
                 text = descricao,
                 style = MaterialTheme.typography.bodySmall,
                 color = Cores.TextoFraco,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
         Icon(

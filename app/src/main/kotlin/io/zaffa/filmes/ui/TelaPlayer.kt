@@ -107,10 +107,25 @@ fun TelaPlayer(modelo: ModeloPrincipal, titulo: String, url: String) {
     // Tela cheia: em pé, um vídeo 16:9 vira uma faixa fina com tarjas enormes.
     // Deitado ele ocupa a tela toda. O usuário escolhe — não forçamos rotação.
     val atividade = contexto as? Activity
-    var deitado by remember { mutableStateOf(false) }
+
+    // Abre DEITADO por padrão. Em pé, um vídeo 16:9 ocupa uma faixa fina com
+    // tarjas pretas enormes em cima e embaixo — foi o que o dono viu no primeiro
+    // teste. Deitado ele usa a tela inteira, que é como se assiste filme.
+    // O botão no topo volta para o modo retrato, caso alguém prefira.
+    var deitado by remember { mutableStateOf(true) }
+
+    LaunchedEffect(deitado) {
+        atividade?.requestedOrientation = if (deitado) {
+            ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
 
     DisposableEffect(Unit) {
         onDispose {
+            // Sair do player devolve a rotação ao aparelho, senão o resto do
+            // app ficaria preso na horizontal.
             atividade?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
@@ -171,14 +186,7 @@ fun TelaPlayer(modelo: ModeloPrincipal, titulo: String, url: String) {
                 aoAlternar = { if (estado.tocando) motor.pausar() else motor.tocar() },
                 aoTrocarMotor = modelo::trocarMotor,
                 deitado = deitado,
-                aoGirar = {
-                    deitado = !deitado
-                    atividade?.requestedOrientation = if (deitado) {
-                        ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
-                    } else {
-                        ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-                    }
-                },
+                aoGirar = { deitado = !deitado },
                 aoRetroceder = { motor.buscar((estado.posicaoMs - 10_000).coerceAtLeast(0L)) },
                 aoAvancar = { motor.buscar(estado.posicaoMs + 30_000) },
                 aoArrastar = { arrastando = true; valorArrasto = it },

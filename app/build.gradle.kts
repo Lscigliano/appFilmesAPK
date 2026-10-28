@@ -106,6 +106,10 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.jsoup)
 
+    // Capas do catálogo
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
+
     // Motor de vídeo 2 — libVLC (tolera servidores que ignoram Range)
     implementation(libs.libvlc)
 
