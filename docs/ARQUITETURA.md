@@ -1,96 +1,115 @@
 # Arquitetura
 
-Mapa do código, e **por que** cada parte é como é. Se você vier mudar algo
-estrutural, mude aqui também.
+Como as peças se encaixam, e **por quê**. Se você mudar algo estrutural, mude
+aqui também — este arquivo é o mapa que a próxima pessoa vai ler.
 
-## Visão geral
+---
+
+## A ideia central
+
+O painel (um CORE/Coreplay) continua sendo a **fonte dos dados e do acesso**.
+O que o app acrescenta é **tudo o que o usuário vê e o controle da reprodução**.
+
+```
+  NOSSO                                      DO PAINEL
+  ─────                                      ─────────
+  tela de login  ──── envia o formulário ───▶ autenticação (cookies)
+  tela inicial
+  catálogo       ◀─── lê a página viva ─────  lista de títulos e categorias
+       │
+       ▼
+  tela de espera ──── abre escondido ───────▶ página de detalhe
+       │                                       (só ela emite o token do vídeo)
+       ▼
+  PLAYER         ◀─── URL do vídeo ─────────  arquivo .mp4 ou stream .m3u8
+  (ExoPlayer ⇄ VLC)
+```
+
+**Por que o painel continua no meio:** só ele emite o token que libera o vídeo.
+Pedir o MP4 direto, sem token, devolve **502** — está medido. Não existe caminho
+que dispense o painel.
+
+**Por que o usuário não o vê:** as páginas dele rodam em WebViews de 1dp,
+invisíveis. O app lê o que precisa e descarta.
+
+## Mapa do código
 
 ```
 app/src/main/kotlin/io/zaffa/filmes/
-├── core/                    ← KOTLIN PURO. Nada de android.* aqui.
-│   ├── model/Modelos.kt     Domínio: Filme, Credenciais, Falha…
-│   └── api/
-│       ├── Json.kt          Leitura tolerante de JSON
-│       ├── ClienteXtream.kt Protocolo Xtream Codes
-│       └── DetectorApi.kt   Descobre o endpoint em tempo de execução
-├── player/                  ← A razão do projeto existir
-│   ├── MotorVideo.kt        Contrato comum aos dois motores
-│   ├── MotorExo.kt          ExoPlayer, ajustado contra o bug de seek
-│   └── MotorVlc.kt          libVLC, tolerante a servidor problemático
-├── data/Sessao.kt           Credenciais e preferências, só no aparelho
-├── ui/                      Compose: Tema, Login, Catálogo, Player
-├── FilmesApp.kt             Container de dependências, feito à mão
-└── MainActivity.kt          Entrada única
+├── core/model/Padroes.kt      Endereço do painel e User-Agent (Kotlin puro)
+├── painel/                    Tudo que conversa com o painel
+│   ├── LoginInvisivel.kt      Preenche e envia o formulário de login
+│   ├── Catalogo.kt            JavaScript de extração + modelo Item
+│   ├── LeitorCatalogo.kt      Carrega a página e colhe títulos e categorias
+│   ├── AbridorDeVideo.kt      Abre o detalhe escondido e captura a URL do vídeo
+│   ├── CapturaDeVideo.kt      Reconhece o que é mídia do painel
+│   └── TelaPainel.kt          A página do painel, quando precisa aparecer
+├── player/                    A razão do projeto existir
+│   ├── MotorVideo.kt          Contrato comum aos dois motores
+│   ├── MotorExo.kt            ExoPlayer, com recuperação automática
+│   └── MotorVlc.kt            libVLC, idem
+├── data/Preferencias.kt       Motor escolhido, sessão, credenciais lembradas
+├── ui/                        Compose: Tema, Login, Início, Catálogo, Espera, Player
+├── FilmesApp.kt               Container de dependências, feito à mão
+└── MainActivity.kt            Entrada única, navegação por estado
 ```
 
-## As decisões, e o motivo
+## Decisões e seus motivos
 
-### Um módulo só, com `core` isolado por pacote
+### Ler a página em vez de usar uma API
+O painel não expõe API documentada: `player_api.php` devolve 404, e o login é por
+formulário. **Tentamos reconstruir as requisições e falhou** — o login nativo
+recusava senha correta (ver `docs/DIARIO.md`).
 
-O plano original era um módulo Gradle `core` separado, Kotlin puro, para a futura
-versão web. Foi **abandonado durante a implementação**: o AGP 9 traz Kotlin
-embutido, e misturar isso com o plugin `kotlin.jvm` de um módulo separado é uma
-fonte de conflito de versão que não vale o custo num projeto deste tamanho.
+A leitura é ancorada no **padrão da URL** (`page=moviedetail&id=`,
+`page=moviecat&id=`), que o painel precisa manter para funcionar, e **nunca em
+classes CSS**, que mudam a cada ajuste visual.
 
-A portabilidade foi preservada por **disciplina verificada**: o pacote
-`io.zaffa.filmes.core` não pode importar `android.*` nem `androidx.*`, e o CI
-falha se alguém importar. Quando a versão web existir, esse pacote é copiado
-inteiro.
+*Fragilidade honesta:* se eles mudarem a estrutura das URLs, a leitura para. O app
+trata isso avisando na tela e oferecendo o painel completo — nunca uma tela vazia.
 
-### Leitura de JSON campo a campo, sem `@Serializable`
+### Login pelo formulário do painel, num WebView invisível
+A tela é nossa; o mecanismo é o do navegador. **Não reconstrua a requisição de
+login** — já custou um ciclo inteiro de depuração.
 
-Painéis Xtream mandam o mesmo campo ora como número, ora como texto, ora ausente,
-ora como `false` no lugar de `null`. Com classes anotadas, **um item estranho
-derruba o catálogo inteiro**. `Json.kt` lê campo a campo e ignora o que não
-entende. Custa mais código e sobrevive a painel mal-comportado — e este painel é
-um CORE, que pode nem seguir o Xtream à risca.
+### Catálogo sem cache
+Nada de lista guardada. Toda abertura relê a página viva, então **título novo no
+painel é título novo no app**, sem nada para invalidar. O botão "atualizar"
+apenas descarta o leitor e relê.
 
-### Descoberta de endpoint em vez de host fixo
+### Categorias são obrigatórias, não enfeite
+A página de Filmes é uma **vitrine com 38 carrosséis**, cada um mostrando só os
+primeiros itens. Rolar até o fim traz ~300 títulos de um acervo muito maior.
+**O acervo completo só existe dentro das categorias.**
 
-O endereço que o usuário vê no app (`painel.exemplo`) não é necessariamente o host da
-API; o portal web é outro (`portal.exemplo`). `DetectorApi` testa esquema e portas em
-ordem de probabilidade e só aceita o endereço que **autenticar de verdade** —
-responder HTTP 200 não basta, porque páginas de bloqueio e de erro também
-respondem 200.
+### Dois motores de vídeo
+O app oficial trava ao avançar; a família Smarters deixa escolher o motor, e as
+instalações que travavam e as que não travavam estavam em motores diferentes.
+Aqui a troca é um toque, **sem perder a posição do filme**.
 
-### Dois motores de vídeo, trocáveis em um toque
+⚠️ **O User-Agent nunca pode conter "VLC"**: o servidor de vídeo responde
+**HTTP 500** a ele. Está centralizado em `Padroes.USER_AGENT`, com a medição
+junto ao código. Remover isso torna o vídeo impossível de tocar.
 
-O núcleo do problema. Resumo técnico:
-
-| | ExoPlayer | libVLC |
-|---|---|---|
-| Exige `HTTP Range` correto | **sim** | não |
-| Lida com MKV sem índice | mal | bem |
-| Consumo de bateria | menor | maior |
-| Suavidade | melhor | boa |
-
-Se o servidor **ignora o cabeçalho Range** — devolve o arquivo do início quando o
-player pede um trecho do meio — o ExoPlayer confia na resposta e congela. É a
-causa nº 1 de "avancei e não volta mais". O VLC detecta a inconsistência e reabre
-o fluxo.
-
-Como não dava para testar o servidor real (rede bloqueada), o app **não escolhe
-por você**: entrega os dois e deixa a troca a um toque, preservando a posição do
-filme. `ferramentas/detectar-api.mjs` responde qual é o certo, quando rodar numa
-rede liberada.
+### Recuperação automática no player
+Falhou depois de um avanço? O player reabre o fluxo na mesma posição, até 5 vezes
+por incidente. O contador só é devolvido após **10 segundos de reprodução
+estável** — sem essa guarda, tocar meio segundo e falhar de novo viraria laço
+infinito, que é o defeito observado no player do próprio painel.
 
 ### Navegação por estado, sem Navigation Compose
-
-São três telas. Uma `sealed interface Tela` no `ModeloPrincipal` resolve, e
-elimina uma dependência e uma camada de indireção que um leitor novo teria que
-aprender antes de mexer em qualquer coisa.
+Seis telas numa `sealed interface Tela`. Elimina uma dependência e uma camada de
+indireção que um leitor novo teria de aprender antes de mexer em qualquer coisa.
 
 ### Container de dependências à mão, sem Hilt
+Dois objetos criados no `Application`. Mais legível para quem chega sem contexto —
+que é o cenário previsto neste projeto.
 
-Três objetos (`HttpClient`, `Sessao`, `DetectorApi`) criados no `Application`.
-Legível para quem chega sem contexto — que é o cenário previsto neste projeto.
+## O que NÃO existe, de propósito
 
-## O que NÃO existe de propósito
-
-- **Sem analytics, sem crash reporting, sem servidor próprio.** O app fala só com
-  o painel do usuário. Credencial que não sai do aparelho não vaza.
-- **Sem cache de catálogo em disco** (ainda). Enquanto o formato da API não for
-  confirmado contra o servidor real, cachear um formato errado só atrapalha.
+- **Sem servidor nosso, sem analytics, sem telemetria.** O app fala só com o
+  painel do usuário. Credencial que não sai do aparelho não vaza.
+- **Sem seleção de qualidade.** O servidor entrega **um** arquivo por título
+  (~1080p, 3 Mbps). Não há o que escolher.
 - **Sem minify no release.** O libVLC carrega classes por JNI e o ganho de
-  tamanho não compensa o risco. As regras ProGuard já estão escritas para quando
-  valer a pena.
+  tamanho não compensa o risco.

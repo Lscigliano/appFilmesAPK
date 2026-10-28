@@ -1,98 +1,85 @@
-# A API do painel
+# Como o painel entrega as coisas
 
-Contrato que o app fala. Serve de referência para a futura versão web, que deve
-reaproveitar o pacote `io.zaffa.filmes.core`.
+O que foi **confirmado na prática**. Nada aqui é suposição — cada linha tem
+origem numa medição ou numa amostra que o dono capturou no navegador.
 
-> ⚠️ **Nada aqui foi confirmado contra o servidor real ainda.** A rede corporativa
-> bloqueia o painel (ver `docs/DIARIO.md`, 2026-10-28). O que está escrito abaixo é
-> o protocolo Xtream Codes padrão, que é o que a família Smarters usa. Ao rodar
-> `ferramentas/detectar-api.mjs` numa rede liberada, **corrija este arquivo com o
-> que o servidor realmente responder** e registre a diferença no diário.
+> ⚠️ A versão anterior deste arquivo descrevia o protocolo **Xtream Codes**.
+> **Estava errada.** Este painel não é Xtream: `player_api.php` devolve 404, e o
+> ID de título é texto (`oev_z4A`), não número sequencial. Todo o cliente Xtream
+> foi removido do projeto. Ver `docs/DIARIO.md`.
 
-## Descoberta do endereço
+---
 
-O usuário informa só o host. O app testa, em ordem:
+## Endereços
 
-```
-http://HOST          http://HOST:8080      https://HOST
-http://HOST:2082     http://HOST:2086      http://HOST:25461      http://HOST:8000
-```
+| O quê | Endereço | Confirmação |
+|---|---|---|
+| Painel | `http://vouver.me/` | em uso |
+| Login | `index.php?page=login` | POST → 302 → homepage |
+| Página inicial | `index.php?page=homepage` | barra do navegador |
+| Filmes | `index.php?page=movies` | dono, no navegador |
+| Séries | `index.php?page=series` | dono, no navegador |
+| TV ao vivo | `index.php?page=livetv` | funcionou no app |
+| Categoria | `index.php?page=moviecat&id=<ID>` | três amostras do dono |
+| Detalhe do título | `index.php?page=moviedetail&id=<ID>` | barra do navegador |
+| Favoritos | `index.php?page=favorites` | ⚠️ **não confirmado** |
+| Continuar | `index.php?page=watchhistory` | ⚠️ **não confirmado** |
 
-Aceita o primeiro que **autenticar de verdade** — responder HTTP 200 não basta,
-porque páginas de erro e de bloqueio de rede também respondem 200.
+Os dois últimos são palpite. Se falharem, o app cai na raiz do painel e avisa na
+tela — nenhum palpite pode prender o usuário.
 
-Implementação: `core/api/DetectorApi.kt`.
+## Login
 
-## Autenticação
+Formulário em `index.php?page=login`, campos:
 
-```
-GET {base}/player_api.php?username=USUARIO&password=SENHA
-```
-
-Resposta esperada:
-
-```json
-{
-  "user_info": {
-    "auth": 1,
-    "status": "Active",
-    "exp_date": "1750000000",
-    "active_cons": "0",
-    "max_connections": "1",
-    "allowed_output_formats": ["m3u8", "ts", "rtmp"]
-  },
-  "server_info": { "port": "8080", "https_port": "8443" }
-}
-```
-
-Regras aplicadas pelo app:
-
-| Condição | Tratamento |
+| Campo | O que é |
 |---|---|
-| `auth == 0` | Usuário ou senha incorretos |
-| `status != "Active"` | Conta expirada/desativada |
-| `active_cons >= max_connections` | **Aviso de limite de telas** — causa real de travamento no meio do filme |
-| corpo é HTML com assinatura de filtro | Rede intermediária bloqueando (não é o servidor) |
+| `username` | usuário |
+| `sifre` | senha (o painel é de base turca) |
+| `csrf_token` | gerado por sessão, está no HTML |
+| `beni_hatirla` | "lembrar-me" |
+| `recaptcha_response` | **existe no formulário mas o reCAPTCHA está DESLIGADO** — a página não carrega script nem sitekey do Google |
 
-## Catálogo de filmes
+Sucesso devolve **302** para `page=homepage`. Falha devolve a própria página de
+login de volta, com status 200 — por isso **não dá para detectar pelo código HTTP**.
 
-```
-GET {base}/player_api.php?...&action=get_vod_categories
-GET {base}/player_api.php?...&action=get_vod_streams[&category_id=N]
-GET {base}/player_api.php?...&action=get_vod_info&vod_id=N
-```
+> 🛑 **Não reconstrua esta requisição em código.** Já foi tentado e falhou: o
+> painel recusava credenciais corretas. O app usa o formulário dele, preenchido
+> por JavaScript num WebView invisível (`painel/LoginInvisivel.kt`).
 
-Campos de interesse em cada filme: `stream_id`, `name`, `stream_icon`,
-`container_extension`, `rating`, `added`, `category_id`.
-
-**Cuidado com `container_extension`.** Às vezes só vem no `get_vod_info`, e a URL
-montada com a extensão errada devolve 404 — o filme simplesmente "não abre". Por
-isso o app busca o detalhe antes de reproduzir
-(`ModeloPrincipal.abrirFilme`).
-
-## URL de reprodução
+## Vídeo
 
 ```
-{base}/movie/{USUARIO}/{SENHA}/{stream_id}.{container_extension}
+http://<ip-do-servidor>/vauth/<numero>.mp4?token=<token-longo>
 ```
 
-> 🔒 **As credenciais vão no caminho da URL.** Essa string nunca pode ir para log,
-> telemetria ou mensagem de erro. `MotorExo` mostra só o código do erro do
-> ExoPlayer justamente por isso.
+| Fato | Valor | Como foi medido |
+|---|---|---|
+| Quem emite o token | **só o painel** | pedir sem token devolve **502** |
+| Validade do token | ≥ 34 min | monitor a cada 2 min |
+| Formato | MP4 progressivo, H.264 + AAC | cabeçalho do arquivo |
+| Qualidade | **~1080p, 2,98 Mbps** | idem |
+| Seleção de qualidade | **não existe** | um arquivo por título |
+| `Accept-Ranges` | sim, 206 Partial Content | |
+| `Access-Control-Allow-Origin` | **`*`** | viabiliza o projeto web |
+| User-Agent do VLC | **HTTP 500** | o servidor recusa |
 
-## Por que a leitura de JSON é tolerante
+**TV e rádio** usam HLS (`.m3u8`), não arquivo fechado. O app captura **só o
+manifesto**, nunca os segmentos `.ts` — eles chegam às centenas por minuto.
 
-Painéis Xtream devolvem o mesmo campo ora como número (`"stream_id": 123`), ora
-como texto (`"stream_id": "123"`), ora ausente, ora `false` no lugar de `null`.
-Com classes `@Serializable`, **um item estranho derruba o catálogo inteiro**.
+## Cuidados que já custaram caro
 
-`core/api/Json.kt` lê campo a campo, aceita número ou texto, e ignora o que não
-entende. Este painel é um **CORE/Coreplay**, que pode nem seguir o Xtream à risca
-— mais um motivo para não confiar em formato fixo.
+1. **O título pode ser um trailer do YouTube.** O painel embute YouTube em
+   alguns itens, por cima da página do filme, com um botão "Fechar". Um player
+   que só espera MP4 fica girando para sempre neles.
+2. **A página de Filmes é uma vitrine, não uma lista.** 38 carrosséis, cada um
+   com os primeiros itens. O acervo completo só sai pelas categorias.
+3. **Medir status HTTP não é medir entrega.** Um `206` com `Content-Range`
+   correto pode entregar 6 KB de 1 MB prometido. **Confira os bytes recebidos.**
+4. **O endereço que o app oficial exibe na tela da conta está morto.** Não é o
+   host da API — testado em 3 redes e 11 portas.
 
-## O que ainda falta mapear
+## Conta
 
-- [ ] Séries: `get_series`, `get_series_info` (temporadas e episódios)
-- [ ] Canais ao vivo: `get_live_streams`, e se o servidor entrega `.ts` ou `.m3u8`
-- [ ] EPG: `get_short_epg`
-- [ ] Confirmar se este painel responde `player_api.php` ou precisa de outro caminho
+O plano tem **máximo de 1 conexão simultânea** (visto em *Meu perfil*). Só uma
+pessoa assiste por vez; isso é do plano, não do app.

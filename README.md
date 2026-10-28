@@ -48,10 +48,11 @@ Estado detalhado: [`tasks/TASK.md`](tasks/TASK.md).
 
 **Leia primeiro, nesta ordem:**
 
-1. [`docs/PROTOCOLO.md`](docs/PROTOCOLO.md) — as regras do projeto. Obrigatório.
-2. [`docs/DIARIO.md`](docs/DIARIO.md) — as 3 entradas do topo. É onde está o que
+1. [`docs/COMECE-AQUI.md`](docs/COMECE-AQUI.md) — como pôr para compilar. Comece por aqui.
+2. [`docs/PROTOCOLO.md`](docs/PROTOCOLO.md) — as regras do projeto. Obrigatório.
+3. [`docs/DIARIO.md`](docs/DIARIO.md) — as 3 entradas do topo. É onde está o que
    o código não conta.
-3. [`tasks/TASK.md`](tasks/TASK.md) — o próximo item a fazer.
+4. [`tasks/TASK.md`](tasks/TASK.md) — estado, fatos medidos e armadilhas.
 
 Compilar:
 
@@ -60,7 +61,9 @@ Compilar:
 # APK em app/build/outputs/apk/debug/
 ```
 
-Requisitos: JDK 17 e Android SDK com `platforms;android-36` e `build-tools;36.0.0`.
+**Requisitos e o passo a passo completo estão em [`docs/COMECE-AQUI.md`](docs/COMECE-AQUI.md)** —
+leia antes de tentar compilar. Resumo: JDK 17 e Android SDK com `platforms;android-37`
+(que o `sdkmanager` talvez não consiga instalar sozinho) e `build-tools;36.0.0`.
 As versões exatas do toolchain e **por que** são essas estão em
 [`gradle/libs.versions.toml`](gradle/libs.versions.toml) — leia os comentários
 antes de atualizar qualquer coisa.

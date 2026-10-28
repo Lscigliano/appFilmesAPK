@@ -3,14 +3,17 @@
 Você está num projeto que segue **metodologia de protocolo e diário**.
 Antes de qualquer coisa, leia nesta ordem:
 
-1. `docs/PROTOCOLO.md` — inteiro. São as regras.
-2. `docs/DIARIO.md` — as 3 entradas do topo.
-3. `tasks/TASK.md` — o próximo item não marcado.
+1. `docs/COMECE-AQUI.md` — como pôr o projeto para compilar.
+2. `docs/PROTOCOLO.md` — inteiro. São as regras.
+3. `docs/DIARIO.md` — as 3 entradas do topo.
+4. `tasks/TASK.md` — estado, fatos já medidos e armadilhas conhecidas.
 
 ## As cinco regras que mais quebram este projeto
 
-1. **Nunca comite credenciais.** O repositório é PÚBLICO. Usuário, senha e URL
-   completa do painel não entram em código, teste, log, README nem diário.
+1. **Nunca comite credenciais.** O repositório é PÚBLICO. **Usuário e senha** não
+   entram em código, teste, log, README nem diário. (O *endereço* do painel é
+   permitido e vive em `core/model/Padroes.kt` — decisão do dono, ver
+   `docs/PROTOCOLO.md` §2.)
    Antes de commitar: rode `bash ferramentas/checar-segredos.sh`.
 
 2. **Não aplique o plugin `org.jetbrains.kotlin.android`.** O AGP 9 traz Kotlin
