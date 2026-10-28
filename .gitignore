@@ -1,0 +1,35 @@
+# ─── SEGREDOS — NUNCA COMITAR (este repositório é PÚBLICO) ───
+local.properties
+secrets.properties
+*.keystore
+*.jks
+keystore.properties
+credenciais.json
+**/credenciais*
+.env
+.env.*
+
+# ─── Build ───
+*.iml
+.gradle/
+build/
+captures/
+.externalNativeBuild/
+.cxx/
+out/
+release/
+*.apk
+*.aab
+*.ap_
+*.dex
+
+# ─── IDE ───
+.idea/
+!.idea/codeStyles/
+*.hprof
+
+# ─── SO ───
+.DS_Store
+Thumbs.db
+desktop.ini
+credenciais.local.json

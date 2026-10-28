@@ -1,0 +1,91 @@
+name: Compilar e publicar APK
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Procura credenciais por PADRÃO. Este arquivo nunca contém a credencial
+      # de verdade — colocá-la aqui seria o próprio vazamento.
+      - name: Procurar credenciais vazadas
+        run: bash ferramentas/checar-segredos.sh
+
+      # Regra 4 do CLAUDE.md: o pacote `core` precisa continuar Kotlin puro,
+      # senão a futura versão para navegador deixa de ser possível.
+      - name: Verificar que o pacote core não usa Android
+        run: |
+          if grep -rnE '^import (android|androidx)\.' app/src/main/kotlin/io/zaffa/filmes/core/; then
+            echo "::error::O pacote io.zaffa.filmes.core não pode importar android.* nem androidx.*"
+            exit 1
+          fi
+          echo "core está puro."
+
+      # Regra 2 do CLAUDE.md: o AGP 9 traz Kotlin embutido; aplicar o plugin
+      # kotlin.android quebra o build com erro pouco óbvio.
+      - name: Verificar que o plugin kotlin.android não voltou
+        run: |
+          if grep -rn 'org.jetbrains.kotlin.android' --include='*.kts' --include='*.toml' .; then
+            echo "::error::Remova o plugin org.jetbrains.kotlin.android (AGP 9 tem Kotlin embutido)"
+            exit 1
+          fi
+          echo "sem kotlin.android."
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      # compileSdk 37 é exigido pelo Compose atual — ver gradle/libs.versions.toml.
+      - name: Instalar SDK necessário
+        run: sdkmanager "platforms;android-37" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Compilar APK
+        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Preparar arquivo para download
+        run: |
+          mkdir -p entrega
+          cp app/build/outputs/apk/debug/app-debug.apk \
+             "entrega/filmes-${GITHUB_SHA::7}.apk"
+          ls -lh entrega/
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: entrega/*.apk
+          retention-days: 30
+
+      # Publica em Releases só no push da main, para baixar no celular sem
+      # precisar entrar na aba "Actions".
+      - name: Publicar no Releases
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="build-${GITHUB_SHA::7}"
+          gh release create "$TAG" entrega/*.apk \
+            --title "Filmes — $TAG" \
+            --notes "APK gerado automaticamente do commit ${GITHUB_SHA::7}.
+
+          **Como instalar:** baixe o .apk pelo navegador do celular, abra o
+          arquivo e autorize a instalação de fontes desconhecidas.
+
+          Se um filme travar ao avançar, toque no nome do motor no canto superior
+          direito do player para trocar entre ExoPlayer e VLC — o filme continua
+          de onde parou."

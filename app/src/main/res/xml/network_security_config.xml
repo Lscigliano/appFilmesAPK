@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Painéis IPTV servem quase tudo em HTTP puro (sem TLS). Sem isto, o Android 9+
+  bloqueia as requisições silenciosamente e o app parece "sem internet".
+  É um requisito do servidor, não uma escolha de segurança nossa.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

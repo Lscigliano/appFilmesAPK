@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Fallback para Android 7 e 8.0 (minSdk 24), que não entendem ícone adaptativo.
+  O adaptativo de verdade está em mipmap-anydpi-v26/.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FF160B2B"
+        android:pathData="M0,0h108v108h-108z" />
+    <path
+        android:fillColor="#FF8B5CF6"
+        android:pathData="M44,36 L74,54 L44,72 Z" />
+</vector>

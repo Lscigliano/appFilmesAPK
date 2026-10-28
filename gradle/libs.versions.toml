@@ -1,0 +1,60 @@
+# Versões conferidas nos repositórios oficiais em 2026-10-28.
+# Antes de subir qualquer versão aqui, leia docs/DIARIO.md — há restrições reais
+# de toolchain registradas lá (compileSdk 37, Kotlin embutido no AGP, etc.).
+[versions]
+agp = "9.4.1"
+# ATENÇÃO: o AGP 9.4.1 embute Kotlin 2.2.10. Os plugins abaixo (2.4.21) SOBEM o KGP
+# para 2.4.21 — subir é permitido, descer não. Mantenha os três na mesma versão.
+kotlin = "2.4.21"
+
+# Exige platform android-37 instalada no SDK (compileSdk 37 em app/build.gradle.kts).
+# Tentamos a BOM 2026.06.01 (Compose 1.11.4) para ficar em compileSdk 36 e NÃO deu:
+# o build falha com "compiled against android-36 / update to at least 37".
+# Ou seja, nesta linha do Compose não existe saída que rode em 36. Ver docs/DIARIO.md.
+composeBom = "2026.09.00"
+
+coreKtx = "1.19.1"
+activityCompose = "1.13.0"
+lifecycle = "2.11.0"
+datastore = "1.3.0"
+media3 = "1.11.1"
+libvlc = "3.7.7"
+ktor = "3.6.0"
+serialization = "1.12.0"
+coil = "3.6.3"
+
+[libraries]
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
+androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+
+compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+compose-ui = { module = "androidx.compose.ui:ui" }
+compose-ui-graphics = { module = "androidx.compose.ui:ui-graphics" }
+compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
+compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+compose-material3 = { module = "androidx.compose.material3:material3" }
+compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
+
+media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
+media3-exoplayer-hls = { module = "androidx.media3:media3-exoplayer-hls", version.ref = "media3" }
+media3-datasource-okhttp = { module = "androidx.media3:media3-datasource-okhttp", version.ref = "media3" }
+media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
+
+libvlc = { module = "org.videolan.android:libvlc-all", version.ref = "libvlc" }
+
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-serialization-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
