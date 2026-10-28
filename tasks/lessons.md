@@ -78,3 +78,19 @@ a campo de senha, e arquivos proibidos versionados. Está em
 
 **Regra 2:** rode a checagem **antes** do primeiro commit de qualquer repositório
 novo. Depois de publicado, o valor permanece no histórico do git mesmo apagado.
+
+---
+
+## 2026-10-28 — Verificação automática não pode acusar a própria documentação
+
+**O erro (duas vezes no mesmo dia):** escrever checagens de CI com `grep` por um
+texto que **a própria documentação do repositório contém**.
+1. O verificador de segredos trazia a credencial literal no padrão de busca.
+2. A checagem "o plugin `kotlin.android` não voltou" quebrou o CI porque o
+   comentário em `build.gradle.kts` que **avisa para não usar o plugin** cita o
+   nome dele.
+
+**Regra:** uma checagem procura o **fato**, não a **palavra**. Busque a forma
+aplicada (`id("...")`, `alias(...)`, atribuição no `.toml`) e exclua linhas de
+comentário. Depois de escrever qualquer checagem, **rode-a localmente** antes de
+commitar — as duas falhas teriam sido pegas em 5 segundos.

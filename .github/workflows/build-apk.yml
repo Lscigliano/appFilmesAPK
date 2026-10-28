@@ -34,13 +34,16 @@ jobs:
 
       # Regra 2 do CLAUDE.md: o AGP 9 traz Kotlin embutido; aplicar o plugin
       # kotlin.android quebra o build com erro pouco óbvio.
+      # Procura o plugin sendo REALMENTE aplicado/declarado — não a menção dele
+      # em comentário (este repositório tem comentários avisando para não usá-lo).
       - name: Verificar que o plugin kotlin.android não voltou
         run: |
-          if grep -rn 'org.jetbrains.kotlin.android' --include='*.kts' --include='*.toml' .; then
+          if grep -rnE '^[[:space:]]*[^/*#]*(id\("org\.jetbrains\.kotlin\.android"\)|alias\(libs\.plugins\.kotlin\.android\)|^[[:space:]]*kotlin-android[[:space:]]*=)' \
+               --include='*.kts' --include='*.toml' .; then
             echo "::error::Remova o plugin org.jetbrains.kotlin.android (AGP 9 tem Kotlin embutido)"
             exit 1
           fi
-          echo "sem kotlin.android."
+          echo "sem kotlin.android aplicado."
 
       - uses: actions/setup-java@v4
         with:
