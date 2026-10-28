@@ -101,15 +101,64 @@ object Catalogo {
     }
 
     /**
-     * JavaScript que rola a página até o fim.
+     * JavaScript que rola a página e pede mais itens.
      *
-     * Catálogos grandes carregam por rolagem infinita; sem isto só os primeiros
-     * títulos existiriam no DOM e a nossa lista viria curta.
+     * Catálogos grandes carregam por rolagem infinita **ou** por um botão
+     * "carregar mais". Sem tratar os dois, a lista vem curta sem nenhum erro —
+     * o pior tipo de falha, porque parece que o acervo é pequeno. Foi o que
+     * aconteceu no primeiro uso: apareciam ~300 títulos de um acervo maior.
      */
     const val JS_ROLAR: String = """
         (function () {
+          function textoDe(el) {
+            return ((el.innerText || el.textContent || '') + ' ' +
+                    (el.getAttribute('aria-label') || '')).toLowerCase();
+          }
+
+          // Alguns painéis exigem clicar para trazer o próximo lote.
+          var botoes = Array.prototype.slice.call(
+            document.querySelectorAll('button, a, [role=button]')
+          );
+          var mais = botoes.filter(function (el) {
+            return /carregar mais|ver mais|mostrar mais|load more|próxima|proxima/.test(textoDe(el));
+          })[0];
+          if (mais) { try { mais.click(); } catch (e) {} }
+
+          // Rola o container que de fato tem barra de rolagem: em alguns
+          // layouts a lista rola dentro de uma div, não no corpo da página.
           window.scrollTo(0, document.body.scrollHeight);
+          document.querySelectorAll('div').forEach(function (d) {
+            if (d.scrollHeight > d.clientHeight + 200) d.scrollTop = d.scrollHeight;
+          });
+
           return document.querySelectorAll('a[href*="detail"]').length;
+        })();
+    """
+
+    /**
+     * Lê as categorias que o painel oferece (Lançamentos, Ação, Comédia…).
+     *
+     * Elas importam por dois motivos: o dono quer navegar por elas, e a página
+     * principal de filmes costuma mostrar só uma fatia do acervo — o resto se
+     * alcança entrando nas categorias.
+     */
+    const val JS_CATEGORIAS: String = """
+        (function () {
+          var vistos = {};
+          var itens = [];
+          var links = document.querySelectorAll(
+            'a[href*="categor"], a[href*="cat_id"], a[href*="catid"], a[href*="genre"]'
+          );
+          for (var i = 0; i < links.length; i++) {
+            var a = links[i];
+            var href = a.href || '';
+            if (!href || vistos[href]) continue;
+            var nome = (a.getAttribute('title') || a.innerText || '').trim().split('\n')[0];
+            if (!nome || nome.length > 40) continue;
+            vistos[href] = true;
+            itens.push({ titulo: nome, capa: '', url: href });
+          }
+          return JSON.stringify(itens);
         })();
     """
 }

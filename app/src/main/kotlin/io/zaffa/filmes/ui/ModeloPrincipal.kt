@@ -27,6 +27,12 @@ sealed interface Tela {
     data object Inicio : Tela
     /** Catálogo na nossa tela, lido da página do painel. */
     data class Catalogo(val secao: Secao) : Tela
+
+    /**
+     * Abrindo um título: a página de detalhe roda escondida só para o painel
+     * emitir o token do vídeo. O usuário vê a nossa tela de carregamento.
+     */
+    data class Abrindo(val urlDetalhe: String, val titulo: String) : Tela
     data class Painel(val url: String, val raiz: String) : Tela
     data class Player(val url: String, val titulo: String) : Tela
 }
@@ -227,18 +233,40 @@ class ModeloPrincipal(aplicacao: Application) : AndroidViewModel(aplicacao) {
     }
 
     /**
-     * Do nosso catálogo, abre a página de detalhe do título.
+     * Do nosso catálogo, vai **direto para o nosso player**.
      *
-     * É lá que o play acontece — e o vídeo é capturado para o nosso player,
-     * como já funcionava.
+     * A página de detalhe ainda precisa rodar, porque só o painel emite o token
+     * do vídeo — mas roda escondida. O usuário vê a nossa tela de carregamento
+     * com o nome do filme, e depois o player. A página do painel não aparece.
      */
-    fun abrirItem(url: String) {
+    fun abrirItem(url: String, titulo: String) {
         viewModelScope.launch {
-            val base = app.preferencias.urlPainel.first()
-            raizDoPainel = base
+            raizDoPainel = app.preferencias.urlPainel.first()
             ultimaPaginaDoPainel = url
-            _tela.value = Tela.Painel(url, base)
+            _tela.value = Tela.Abrindo(url, titulo)
         }
+    }
+
+    /** O vídeo foi capturado da página escondida: toca no nosso player. */
+    fun aoAbrirCapturado(url: String, tituloDaPagina: String) {
+        val titulo = tituloDaPagina.ifBlank {
+            (_tela.value as? Tela.Abrindo)?.titulo.orEmpty()
+        }.ifBlank { CapturaDeVideo.identificador(url) }
+        _tela.value = Tela.Player(url, titulo)
+    }
+
+    /**
+     * Não deu para capturar o vídeo escondido.
+     *
+     * Acontece, por exemplo, quando o título só tem trailer do YouTube, ou
+     * quando a página mudou de estrutura. Em vez de deixar o usuário preso num
+     * carregamento, mostramos a página de verdade — lá ele dá o play e o vídeo
+     * é capturado como antes.
+     */
+    fun aoDesistirDeAbrir() {
+        val atual = _tela.value as? Tela.Abrindo ?: return
+        val raiz = raizDoPainel ?: atual.urlDetalhe
+        _tela.value = Tela.Painel(atual.urlDetalhe, raiz)
     }
 
     /** Abre o painel na página inicial dele. */

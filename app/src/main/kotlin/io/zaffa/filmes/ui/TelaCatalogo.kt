@@ -70,6 +70,7 @@ import io.zaffa.filmes.painel.LeitorCatalogo
 fun TelaCatalogo(
     secao: Secao,
     aoAbrirItem: (Item) -> Unit,
+
     aoVoltar: () -> Unit,
 ) {
     var itens by remember(secao) { mutableStateOf<List<Item>?>(null) }

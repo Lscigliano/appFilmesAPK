@@ -18,6 +18,7 @@ import io.zaffa.filmes.painel.TelaPainel
 import io.zaffa.filmes.ui.Cores
 import io.zaffa.filmes.ui.ModeloPrincipal
 import io.zaffa.filmes.ui.Tela
+import io.zaffa.filmes.ui.TelaAbrindo
 import io.zaffa.filmes.ui.TelaCatalogo
 import io.zaffa.filmes.ui.TelaInicio
 import io.zaffa.filmes.ui.TelaLogin
@@ -53,9 +54,17 @@ class MainActivity : ComponentActivity() {
                             aoSair = modelo::sair,
                         )
 
+                        is Tela.Abrindo -> TelaAbrindo(
+                            titulo = t.titulo,
+                            urlDetalhe = t.urlDetalhe,
+                            aoCapturar = modelo::aoAbrirCapturado,
+                            aoDesistir = modelo::aoDesistirDeAbrir,
+                            aoVoltar = modelo::voltarAoInicio,
+                        )
+
                         is Tela.Catalogo -> TelaCatalogo(
                             secao = t.secao,
-                            aoAbrirItem = { modelo.abrirItem(it.url) },
+                            aoAbrirItem = { modelo.abrirItem(it.url, it.titulo) },
                             aoVoltar = modelo::voltarAoInicio,
                         )
 

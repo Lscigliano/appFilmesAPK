@@ -14,7 +14,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import io.zaffa.filmes.core.model.Padroes
-import kotlinx.coroutines.android.awaitFrame
 
 /**
  * Carrega uma página do painel sem mostrá-la e devolve os títulos encontrados.
@@ -36,6 +35,7 @@ fun LeitorCatalogo(
     val concluido = remember { mutableStateOf(false) }
     val rolagens = remember { mutableIntStateOf(0) }
     val ultimaContagem = remember { mutableIntStateOf(-1) }
+    val vazias = remember { mutableIntStateOf(0) }
 
     AndroidView(
         // 1dp: um WebView sem tamanho não executa layout em alguns aparelhos, e
@@ -57,7 +57,7 @@ fun LeitorCatalogo(
                 webViewClient = object : WebViewClient() {
                     override fun onPageFinished(view: WebView, pagina: String) {
                         if (concluido.value) return
-                        extrairComRolagem(view, rolagens, ultimaContagem, concluido, aoLer)
+                        extrairComRolagem(view, rolagens, ultimaContagem, vazias, concluido, aoLer)
                     }
 
                     override fun onReceivedError(
@@ -96,6 +96,7 @@ private fun extrairComRolagem(
     view: WebView,
     rolagens: androidx.compose.runtime.MutableIntState,
     ultimaContagem: androidx.compose.runtime.MutableIntState,
+    vazias: androidx.compose.runtime.MutableIntState,
     concluido: androidx.compose.runtime.MutableState<Boolean>,
     aoLer: (List<Item>) -> Unit,
 ) {
@@ -103,7 +104,11 @@ private fun extrairComRolagem(
         if (concluido.value) return@evaluateJavascript
 
         val contagem = resultado?.trim()?.toIntOrNull() ?: 0
-        val parou = contagem == ultimaContagem.intValue
+        // Exige TRÊS rodadas sem item novo antes de parar: o próximo lote pode
+        // demorar um ciclo para chegar, e parar cedo cortava o catálogo.
+        val semNovidade = contagem == ultimaContagem.intValue
+        vazias.intValue = if (semNovidade) vazias.intValue + 1 else 0
+        val parou = vazias.intValue >= 3
         ultimaContagem.intValue = contagem
         rolagens.intValue += 1
 
@@ -118,12 +123,15 @@ private fun extrairComRolagem(
         } else {
             // Dá tempo de a página carregar o próximo lote antes de rolar de novo.
             view.postDelayed(
-                { if (!concluido.value) extrairComRolagem(view, rolagens, ultimaContagem, concluido, aoLer) },
+                { if (!concluido.value) extrairComRolagem(view, rolagens, ultimaContagem, vazias, concluido, aoLer) },
                 ESPERA_ENTRE_ROLAGENS_MS,
             )
         }
     }
 }
 
-private const val MAX_ROLAGENS = 25
-private const val ESPERA_ENTRE_ROLAGENS_MS = 700L
+// Teto alto de propósito: o primeiro uso real trouxe só ~300 títulos de um
+// acervo maior, porque 25 rolagens não davam conta. Cada rolagem é barata
+// (nenhuma imagem é baixada), e o laço para sozinho quando não aparece item novo.
+private const val MAX_ROLAGENS = 200
+private const val ESPERA_ENTRE_ROLAGENS_MS = 450L

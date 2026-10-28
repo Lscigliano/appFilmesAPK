@@ -327,7 +327,7 @@ private fun BarraDoPainel(
 }
 
 /** Recebe do JavaScript o endereço que o elemento `<video>` está tocando. */
-private class PonteDeVideo(private val aoReceber: (String) -> Unit) {
+internal class PonteDeVideo(private val aoReceber: (String) -> Unit) {
     @android.webkit.JavascriptInterface
     fun videoDetectado(url: String) {
         if (url.isNotBlank()) aoReceber(url)
