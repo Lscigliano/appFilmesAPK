@@ -15,7 +15,7 @@ que ficou pronto. Níveis de prova (N1..N4) definidos em `docs/PROTOCOLO.md`, §
 
 ## Fase 2 — App compilando **(em andamento)**
 
-- [ ] **N1 — `./gradlew :app:assembleDebug` termina em BUILD SUCCESSFUL**
+- [x] **N1 — `./gradlew :app:assembleDebug` termina em BUILD SUCCESSFUL** ✅ 2026-10-28
       *Prova:* colar a última linha do build no diário.
       *Risco conhecido:* o AGP 9.4.1 embute Kotlin 2.2.10 e os plugins do Compose
       e do serialization aqui são 2.4.21. Em tese sobe o KGP para 2.4.21 sem

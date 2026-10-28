@@ -62,6 +62,19 @@ android {
         buildConfig = true
     }
 
+    // O libVLC traz bibliotecas nativas para 4 arquiteturas; juntas passam de
+    // 220 MB — ninguém baixa isso no celular. Separando por arquitetura, cada
+    // APK fica em ~60 MB. `arm64-v8a` cobre praticamente todo celular moderno;
+    // `armeabi-v7a` cobre aparelhos antigos e TV Box baratas.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a")
+            isUniversalApk = false
+        }
+    }
+
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"

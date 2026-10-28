@@ -58,11 +58,14 @@ jobs:
       - name: Compilar APK
         run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
 
-      - name: Preparar arquivo para download
+      # O build gera um APK por arquitetura (ver splits em app/build.gradle.kts).
+      - name: Preparar arquivos para download
         run: |
           mkdir -p entrega
-          cp app/build/outputs/apk/debug/app-debug.apk \
-             "entrega/filmes-${GITHUB_SHA::7}.apk"
+          for apk in app/build/outputs/apk/debug/*.apk; do
+            abi=$(basename "$apk" | sed -E 's/app-(.*)-debug\.apk/\1/')
+            cp "$apk" "entrega/filmes-${abi}-${GITHUB_SHA::7}.apk"
+          done
           ls -lh entrega/
 
       - uses: actions/upload-artifact@v4
@@ -83,9 +86,19 @@ jobs:
             --title "Filmes — $TAG" \
             --notes "APK gerado automaticamente do commit ${GITHUB_SHA::7}.
 
-          **Como instalar:** baixe o .apk pelo navegador do celular, abra o
-          arquivo e autorize a instalação de fontes desconhecidas.
+          ### Qual arquivo baixar
 
-          Se um filme travar ao avançar, toque no nome do motor no canto superior
-          direito do player para trocar entre ExoPlayer e VLC — o filme continua
-          de onde parou."
+          - **\`filmes-arm64-v8a-*.apk\`** — este aqui, para praticamente todo
+            celular dos últimos anos.
+          - \`filmes-armeabi-v7a-*.apk\` — só se o de cima recusar a instalar
+            (aparelhos antigos e algumas TV Box).
+
+          ### Como instalar
+
+          Baixe pelo navegador do celular, abra o arquivo e autorize a instalação
+          de fontes desconhecidas quando o Android pedir.
+
+          ### Se o filme travar ao avançar
+
+          Toque no nome do motor no canto superior direito do player para trocar
+          entre **ExoPlayer** e **VLC** — o filme continua de onde parou."

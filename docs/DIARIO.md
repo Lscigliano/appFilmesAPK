@@ -8,6 +8,33 @@
 
 ---
 
+## [2026-10-28] N1 alcançado — e o APK nasceu com 221 MB
+**Quem:** Claude Opus 5
+
+**Situação:** Depois de instalar a plataforma 37 à mão, o build finalmente passou:
+`BUILD SUCCESSFUL in 2m 36s`. Primeiro nível de prova (N1) atingido.
+
+**Resultado inesperado:** o APK saiu com **221 MB**. Causa: `libvlc-all` embute as
+bibliotecas nativas das quatro arquiteturas (arm64-v8a, armeabi-v7a, x86, x86_64),
+~55 MB cada. Tecnicamente "funciona", mas ninguém baixa 221 MB no celular — ou
+seja, falharia no objetivo real do projeto, que é qualquer pessoa instalar e
+assistir.
+
+**Ação:** `splits { abi { ... } }` em `app/build.gradle.kts`, gerando um APK por
+arquitetura e descartando x86/x86_64 (que só existem em emulador).
+
+**Resultado:** `arm64-v8a` com **71 MB** e `armeabi-v7a` com **64 MB**.
+
+**Aprendizado:**
+1. Qualquer projeto que use libVLC **precisa** de ABI splits desde o começo; sem
+   isso o APK fica inutilizável na prática.
+2. `arm64-v8a` cobre praticamente todo celular moderno; `armeabi-v7a` fica como
+   alternativa para aparelho antigo e TV Box barata. Não vale gerar x86.
+3. Lembrete do protocolo §5: "compila" não é "funciona". Um APK de 221 MB compila
+   e mesmo assim falha o objetivo. O nível N1 não deve ser confundido com entrega.
+
+---
+
 ## [2026-10-28] O próprio verificador de segredos quase vazou a credencial
 **Quem:** Claude Opus 5
 

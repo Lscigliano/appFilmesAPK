@@ -16,7 +16,9 @@ motor **sem perder a posição do filme**.
 
 Não precisa de Android Studio, nem de Java, nem de nada instalado.
 
-1. Baixe o arquivo `.apk` mais recente em **[Releases](../../releases)**.
+1. Abra **[Releases](../../releases)** e baixe o arquivo mais recente terminado
+   em **`arm64-v8a.apk`** — é o certo para praticamente todo celular atual.
+   (Se ele recusar a instalar, baixe a versão `armeabi-v7a.apk`.)
 2. No celular, abra o arquivo baixado. O Android vai pedir para permitir
    "instalar de fontes desconhecidas" — autorize para o seu navegador/gerenciador
    de arquivos.
