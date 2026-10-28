@@ -8,6 +8,36 @@
 
 ---
 
+## [2026-10-28] Token não expira: hipótese encerrada após 34 minutos de medição
+**Quem:** Claude Opus 5
+
+**Situação:** Entre as causas possíveis do travamento ao avançar, uma era o token
+da URL do vídeo expirar durante a reprodução — o que faria a nova conexão aberta
+pelo avanço ser recusada.
+
+**Ação:** Monitor automático repetindo a mesma requisição `Range` com o **mesmo
+token**, a cada 2 minutos, por 34 minutos.
+
+**Resultado:** `HTTP 206` em **todas** as 18 medições, da primeira (+0min) à última
+(+34min). Tempo de resposta estável.
+
+**Aprendizado:**
+1. **Expiração de token está descartada** como causa do travamento. Não gaste
+   tempo nessa direção de novo — está medido.
+2. Como o filme tem ~2h25 e o token sobrevive a pelo menos 34 minutos sem sinal de
+   degradação, nem o cenário "expira no meio do filme" se sustenta. Se alguém
+   quiser fechar de vez, basta estender o monitor; o script está no histórico.
+3. Das hipóteses iniciais, **só uma sobreviveu a toda a medição**: o servidor
+   devolve HTTP 500 ao User-Agent do VLC. Todas as outras — servidor sem suporte a
+   `Range`, limite de conexões, token expirando — foram descartadas por teste.
+4. Como nenhuma causa remota explica o sintoma, a correção foi feita sobre o
+   **efeito**: recuperação automática nos dois motores. É um conserto honesto
+   (reabre e continua) e não depende de descobrir a causa raiz, que pode ser
+   específica do aparelho ou da rede do dono.
+
+---
+
+
 ## [2026-10-28] A arquitetura inteira estava errada — e o dono derrubou minha conclusão
 **Quem:** Claude Opus 5, com o dono coletando evidência no navegador
 

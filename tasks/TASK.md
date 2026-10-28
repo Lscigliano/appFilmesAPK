@@ -29,7 +29,7 @@ que ficou pronto. Níveis de prova (N1..N4) definidos em `docs/PROTOCOLO.md`, §
 > ⚠️ Nada desta fase pode ser testado na rede corporativa — o filtro Sophos
 > bloqueia o painel. Ver diário, 2026-10-28. Faça em casa ou no 4G/5G.
 
-- [ ] **Rodar `node ferramentas/detectar-api.mjs`** e colar o relatório no diário.
+- [x] ~~Detectar a API~~ — resolvido de outro jeito: a URL do vídeo foi capturada no navegador e o painel NÃO é Xtream. Ver diário.
       Isso responde de uma vez: qual API, qual porta, e **se o servidor aceita
       busca por posição**.
 - [ ] **N3 — login autentica e o catálogo lista filmes com capa**
