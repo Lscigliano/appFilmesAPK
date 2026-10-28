@@ -29,7 +29,7 @@ import io.zaffa.filmes.core.model.Padroes
 @Composable
 fun LeitorCatalogo(
     url: String,
-    aoLer: (List<Item>) -> Unit,
+    aoLer: (itens: List<Item>, categorias: List<Item>) -> Unit,
     aoFalhar: (String) -> Unit,
 ) {
     val concluido = remember { mutableStateOf(false) }
@@ -98,7 +98,7 @@ private fun extrairComRolagem(
     ultimaContagem: androidx.compose.runtime.MutableIntState,
     vazias: androidx.compose.runtime.MutableIntState,
     concluido: androidx.compose.runtime.MutableState<Boolean>,
-    aoLer: (List<Item>) -> Unit,
+    aoLer: (itens: List<Item>, categorias: List<Item>) -> Unit,
 ) {
     view.evaluateJavascript(Catalogo.JS_ROLAR) { resultado ->
         if (concluido.value) return@evaluateJavascript
@@ -117,8 +117,14 @@ private fun extrairComRolagem(
         if (parou || rolagens.intValue >= MAX_ROLAGENS) {
             view.evaluateJavascript(Catalogo.JS_EXTRAIR) { json ->
                 if (concluido.value) return@evaluateJavascript
-                concluido.value = true
-                aoLer(Catalogo.lerJson(json))
+                val titulos = Catalogo.lerJson(json)
+                // As categorias vêm da mesma página; lê-las aqui evita uma
+                // segunda carga só para isso.
+                view.evaluateJavascript(Catalogo.JS_CATEGORIAS) { jsonCat ->
+                    if (concluido.value) return@evaluateJavascript
+                    concluido.value = true
+                    aoLer(titulos, Catalogo.lerJson(jsonCat))
+                }
             }
         } else {
             // Dá tempo de a página carregar o próximo lote antes de rolar de novo.

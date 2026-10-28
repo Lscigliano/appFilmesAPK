@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -79,19 +81,40 @@ fun TelaCatalogo(
 
     // Contador de recargas. Serve de chave para o leitor: mudá-lo descarta o
     // WebView anterior e cria um novo, que lê a página de novo do zero. É o que
-    // faz o botão "atualizar" realmente buscar títulos novos, em vez de
-    // redesenhar a mesma lista.
+    // faz o botão "atualizar" realmente buscar títulos novos.
     var recarga by remember(secao) { mutableIntStateOf(0) }
 
-    BackHandler { aoVoltar() }
+    // As categorias do painel (Ação, Comédia, Lançamentos…). Importam mais do
+    // que parece: a página principal da seção é uma vitrine e mostra só uma
+    // fatia do acervo. **O resto só se alcança entrando nas categorias.**
+    var categorias by remember(secao) { mutableStateOf<List<Item>>(emptyList()) }
+    var categoriaAtual by remember(secao) { mutableStateOf<Item?>(null) }
+
+    BackHandler {
+        if (categoriaAtual != null) {
+            categoriaAtual = null
+            itens = null
+        } else {
+            aoVoltar()
+        }
+    }
+
+    val urlAtual = categoriaAtual?.url
+        ?: secao.url(io.zaffa.filmes.core.model.Padroes.PAINEL_URL)
 
     // Carrega enquanto a lista ainda não chegou. O WebView tem 1dp e sai da
     // árvore assim que termina.
     if (itens == null && erro == null) {
-        key(recarga) {
+        key(recarga, urlAtual) {
             LeitorCatalogo(
-                url = secao.url(io.zaffa.filmes.core.model.Padroes.PAINEL_URL),
-                aoLer = { itens = it },
+                url = urlAtual,
+                aoLer = { titulos, cats ->
+                    itens = titulos
+                    // Só substitui se a página trouxe categorias: as páginas de
+                    // categoria podem não repetir a lista, e perdê-la deixaria
+                    // o usuário sem como voltar às outras.
+                    if (cats.isNotEmpty()) categorias = cats
+                },
                 aoFalhar = { erro = it },
             )
         }
@@ -102,6 +125,13 @@ fun TelaCatalogo(
         erro = null
         busca = ""
         recarga += 1
+    }
+
+    fun escolherCategoria(categoria: Item?) {
+        categoriaAtual = categoria
+        itens = null
+        erro = null
+        busca = ""
     }
 
     val visiveis = remember(itens, busca) {
@@ -139,9 +169,14 @@ fun TelaCatalogo(
                 )
                 if (itens != null) {
                     Text(
-                        text = "${itens!!.size} títulos",
+                        text = buildString {
+                            append("${itens!!.size} títulos")
+                            categoriaAtual?.let { append(" · ${it.titulo}") }
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = Cores.TextoFraco,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
@@ -180,6 +215,29 @@ fun TelaCatalogo(
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 8.dp),
             )
+        }
+
+        if (categorias.isNotEmpty()) {
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(bottom = 6.dp),
+            ) {
+                item {
+                    ChipCategoria(
+                        texto = "Destaques",
+                        selecionado = categoriaAtual == null,
+                        aoClicar = { escolherCategoria(null) },
+                    )
+                }
+                items(categorias, key = { it.url }) { categoria ->
+                    ChipCategoria(
+                        texto = categoria.titulo,
+                        selecionado = categoriaAtual?.url == categoria.url,
+                        aoClicar = { escolherCategoria(categoria) },
+                    )
+                }
+            }
         }
 
         when {
@@ -228,6 +286,31 @@ fun TelaCatalogo(
                 }
             }
         }
+    }
+}
+
+/**
+ * Chip de categoria.
+ *
+ * Feito à mão em vez de `FilterChip` para a cor selecionada ser a do app, e não
+ * a do tema padrão do Material — o painel usa laranja, o nosso é violeta.
+ */
+@Composable
+private fun ChipCategoria(texto: String, selecionado: Boolean, aoClicar: () -> Unit) {
+    Box(
+        Modifier
+            .clip(RoundedCornerShape(20.dp))
+            .background(if (selecionado) Cores.Violeta else Cores.SuperficieAlta)
+            .clickable(onClick = aoClicar)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+    ) {
+        Text(
+            text = texto,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = if (selecionado) FontWeight.Bold else FontWeight.Normal,
+            color = if (selecionado) Cores.Texto else Cores.TextoFraco,
+            maxLines = 1,
+        )
     }
 }
 

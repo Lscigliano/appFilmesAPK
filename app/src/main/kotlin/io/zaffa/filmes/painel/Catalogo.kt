@@ -146,13 +146,13 @@ object Catalogo {
         (function () {
           var vistos = {};
           var itens = [];
-          var links = document.querySelectorAll(
-            'a[href*="categor"], a[href*="cat_id"], a[href*="catid"], a[href*="genre"]'
-          );
+          // Padrão confirmado pelo dono: index.php?page=moviecat&id=...
+          // (e seriecat, por simetria, para a seção de séries).
+          var links = document.querySelectorAll('a[href*="cat&id="], a[href*="cat&"]');
           for (var i = 0; i < links.length; i++) {
             var a = links[i];
             var href = a.href || '';
-            if (!href || vistos[href]) continue;
+            if (!href || href.indexOf('cat') === -1 || vistos[href]) continue;
             var nome = (a.getAttribute('title') || a.innerText || '').trim().split('\n')[0];
             if (!nome || nome.length > 40) continue;
             vistos[href] = true;
