@@ -78,7 +78,8 @@ fun TelaLogin(modelo: ModeloPrincipal) {
                 placeholder = { Text("ex.: meupainel.com") },
                 supportingText = {
                     Text(
-                        "Só o endereço. O app descobre sozinho a porta certa.",
+                        "Já preenchido. Troque só se o seu painel for outro — " +
+                            "o app descobre a porta sozinho.",
                         color = Cores.TextoFraco,
                     )
                 },

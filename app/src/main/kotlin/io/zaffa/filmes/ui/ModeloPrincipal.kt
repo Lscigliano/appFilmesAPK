@@ -9,6 +9,7 @@ import io.zaffa.filmes.core.model.Categoria
 import io.zaffa.filmes.core.model.ContaInfo
 import io.zaffa.filmes.core.model.Credenciais
 import io.zaffa.filmes.core.model.Falha
+import io.zaffa.filmes.core.model.Padroes
 import io.zaffa.filmes.core.model.Filme
 import io.zaffa.filmes.core.model.Resultado
 import io.zaffa.filmes.player.Motor
@@ -27,7 +28,8 @@ sealed interface Tela {
 }
 
 data class EstadoLogin(
-    val host: String = "",
+    /** Já vem preenchido com [Padroes.SERVIDOR]; o usuário pode trocar. */
+    val host: String = Padroes.SERVIDOR,
     val usuario: String = "",
     val senha: String = "",
     val ocupado: Boolean = false,

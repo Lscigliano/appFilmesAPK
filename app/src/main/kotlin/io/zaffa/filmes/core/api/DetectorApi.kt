@@ -24,6 +24,9 @@ import io.zaffa.filmes.core.model.TipoApi
  * O detector tenta, em ordem, as combinações de esquema e porta que os painéis
  * dessa família usam, e devolve a primeira que **autenticar de verdade** — não
  * basta responder HTTP 200.
+ *
+ * Quando nada responde, ele devolve o **resumo do que tentou**. Sem isso a tela
+ * mostra "não encontrei" e ninguém consegue agir.
  */
 class DetectorApi(private val http: HttpClient) {
 
@@ -33,16 +36,16 @@ class DetectorApi(private val http: HttpClient) {
     )
 
     /**
-     * @param hostDigitado o que o usuário escreveu. Aceita `meupainel.com`,
-     *        `http://meupainel.com`, `http://meupainel.com:8080/` e variações
-     *        com espaço em volta.
+     * @param hostDigitado o que o usuário escreveu. Tolera `meupainel.com`,
+     *        `http://meupainel.com`, `https meupainel.com`, `MEUPAINEL.COM/`,
+     *        espaços no meio e porta junto (`meupainel.com:8080`).
      */
     suspend fun detectar(hostDigitado: String, credenciais: Credenciais): Resultado<Descoberta> {
         val host = normalizarHost(hostDigitado)
-        if (host.isBlank()) return Resultado.Erro(Falha.NenhumEndpointRespondeu)
+        if (!pareceHost(host)) return Resultado.Erro(Falha.EnderecoInvalido)
 
         var viuBloqueioDeRede = false
-        var viuCredencialRuim = false
+        val diagnostico = StringBuilder()
 
         for (base in candidatos(host)) {
             val cliente = ClienteXtream(http, base, credenciais)
@@ -52,35 +55,43 @@ class DetectorApi(private val http: HttpClient) {
                         Descoberta(EndpointDescoberto(base, TipoApi.XTREAM), r.valor),
                     )
 
-                is Resultado.Erro -> when (r.causa) {
-                    // Credencial errada é resposta definitiva do servidor certo:
-                    // continuar testando portas não ajuda, mas registramos para
-                    // dar a mensagem correta no fim.
-                    is Falha.CredenciaisInvalidas -> viuCredencialRuim = true
+                is Resultado.Erro -> when (val causa = r.causa) {
+                    // Credencial errada é resposta definitiva do servidor CERTO:
+                    // achamos o painel, o problema é o login. Parar aqui evita
+                    // mostrar "servidor não encontrado" quando é só senha errada.
+                    is Falha.CredenciaisInvalidas -> return r
                     is Falha.ContaExpirada -> return r
-                    is Falha.RedeIntermediariaBloqueou -> viuBloqueioDeRede = true
-                    else -> Unit // porta fechada / timeout: tenta a próxima
+
+                    is Falha.RedeIntermediariaBloqueou -> {
+                        viuBloqueioDeRede = true
+                        diagnostico.appendLine("• ${rotulo(base)} — bloqueado pela rede")
+                    }
+
+                    is Falha.NaoEUmPainel ->
+                        diagnostico.appendLine("• ${rotulo(base)} — respondeu, mas não é painel")
+
+                    is Falha.SemConexao ->
+                        diagnostico.appendLine("• ${rotulo(base)} — ${resumirFalhaDeRede(causa.detalhe)}")
+
+                    else -> diagnostico.appendLine("• ${rotulo(base)} — sem resposta")
                 }
             }
         }
 
         // Nenhum Xtream respondeu. Antes de desistir, testa lista M3U simples.
-        if (!viuCredencialRuim) {
-            for (base in candidatos(host)) {
-                if (temListaM3u(base, credenciais)) {
-                    return Resultado.Ok(
-                        Descoberta(EndpointDescoberto(base, TipoApi.M3U), null),
-                    )
-                }
+        for (base in candidatos(host)) {
+            if (temListaM3u(base, credenciais)) {
+                return Resultado.Ok(Descoberta(EndpointDescoberto(base, TipoApi.M3U), null))
             }
         }
 
+        if (viuBloqueioDeRede) return Resultado.Erro(Falha.RedeIntermediariaBloqueou)
+
         return Resultado.Erro(
-            when {
-                viuCredencialRuim -> Falha.CredenciaisInvalidas
-                viuBloqueioDeRede -> Falha.RedeIntermediariaBloqueou
-                else -> Falha.NenhumEndpointRespondeu
-            },
+            Falha.NenhumEndpointRespondeu(
+                tentativas = candidatos(host).size,
+                resumo = diagnostico.toString().trimEnd(),
+            ),
         )
     }
 
@@ -114,11 +125,52 @@ class DetectorApi(private val http: HttpClient) {
             )
         }
 
-        fun normalizarHost(bruto: String): String =
-            bruto.trim()
-                .removePrefix("https://")
-                .removePrefix("http://")
-                .substringBefore('/')
-                .trim()
+        /** "http://x:8080" -> "porta 8080"; "https://x" -> "porta 443 (https)". */
+        fun rotulo(base: String): String {
+            val semEsquema = base.substringAfter("://")
+            val porta = semEsquema.substringAfter(':', "")
+            return when {
+                porta.isNotEmpty() -> "porta $porta"
+                base.startsWith("https") -> "porta 443 (https)"
+                else -> "porta 80"
+            }
+        }
+
+        fun resumirFalhaDeRede(detalhe: String): String = when {
+            detalhe.contains("timeout", true) -> "demorou demais"
+            detalhe.contains("HTTP 4", true) -> "endereço não existe nesse servidor"
+            detalhe.contains("HTTP 5", true) -> "servidor recusou"
+            detalhe.startsWith("HTTP") -> detalhe
+            else -> "sem resposta"
+        }
+
+        /**
+         * Limpa o que o usuário digitou.
+         *
+         * Tolera de propósito as formas que as pessoas realmente escrevem:
+         * "https pfsv.io" (com espaço, sem ://), "HTTP://X/", "  x.com  ".
+         * Um usuário digitando "https " antes do endereço não deve virar
+         * "servidor não encontrado" — já aconteceu no primeiro teste real.
+         */
+        fun normalizarHost(bruto: String): String {
+            var s = bruto.trim().lowercase()
+            // remove esquema com :// ou escrito solto antes do endereço
+            s = s.removePrefix("https://").removePrefix("http://")
+            s = s.removePrefix("https:").removePrefix("http:")
+            s = s.removePrefix("https").removePrefix("http")
+            s = s.trimStart(' ', ':', '/')
+            // tira caminho, query e espaços internos
+            s = s.substringBefore('/').substringBefore('?')
+            s = s.filterNot { it.isWhitespace() }
+            return s.trim('.', ':', '-')
+        }
+
+        /** Barra entradas que não têm como ser um endereço de servidor. */
+        fun pareceHost(host: String): Boolean {
+            if (host.length < 4) return false
+            val semPorta = host.substringBefore(':')
+            if (!semPorta.contains('.')) return false
+            return semPorta.all { it.isLetterOrDigit() || it == '.' || it == '-' }
+        }
     }
 }

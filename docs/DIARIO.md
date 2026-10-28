@@ -8,6 +8,49 @@
 
 ---
 
+## [2026-10-28] Primeiro teste em aparelho real — N2 atingido, e o usuário achou dois defeitos
+**Quem:** Claude Opus 5, com o dono testando no celular
+
+**Situação:** APK publicado no Releases. Primeira instalação real, fora da máquina
+de desenvolvimento.
+
+**Resultado:** **Instalou, abriu, a tela de login funcionou e a detecção rodou** —
+nível **N2 atingido**. A mensagem de erro apareceu em português, como projetada.
+
+**Dois defeitos que só o uso real revelou:**
+
+1. **O usuário digitou `https pfsv.io`** (com espaço, sem `://`). O normalizador
+   só removia os prefixos `http://` e `https://`, então tentou encontrar um host
+   chamado literalmente "https pfsv.io". Falha minha de desenho: supus que as
+   pessoas digitariam uma URL bem formada ou nada. Corrigido para tolerar esquema
+   solto, espaços internos, maiúsculas, caminho e barra no fim; entrada que não
+   pode ser host agora dá "Endereço inválido", não "servidor não encontrado".
+
+2. **"Não foi possível encontrar o servidor" não dizia nada.** O usuário não tinha
+   como agir, e eu não tinha como depurar à distância. Agora a falha carrega o
+   resumo do que foi tentado, porta a porta ("porta 8080 — sem resposta",
+   "porta 80 — respondeu, mas não é painel"). Transforma reclamação em diagnóstico.
+
+**Decisão do dono:** o endereço do servidor passa a vir **pré-preenchido** e
+editável (`core/model/Padroes.kt`). Motivo: "igual qualquer outro programa de
+usuário" — abrir o app e já poder digitar só usuário e senha. Isso abriu exceção
+na regra do protocolo §2, que proibia commitar o endereço do painel; a regra foi
+atualizada com a justificativa. **Usuário e senha continuam proibidos.**
+
+**Aprendizado:**
+1. **Mensagem de erro sem o "o quê" é inútil em app distribuído.** Quem instala
+   não tem logcat, e quem desenvolve não tem o aparelho. A mensagem É o canal de
+   diagnóstico — trate-a como tal desde o começo.
+2. **Normalizar entrada do usuário com tolerância, não com rigor.** O primeiro
+   usuário real já digitou de um jeito que eu não previ. Rejeitar é o último
+   recurso, não o primeiro.
+3. Em aberto e crítico: **não se sabe em qual rede o celular estava** durante o
+   teste. O dono relatou que o app oficial não funciona no 5G dele, só no WiFi.
+   Sem essa informação, o resultado não conclui nada sobre o servidor.
+
+---
+
+
 ## [2026-10-28] CI verde e APK publicado — quatro armadilhas no caminho
 **Quem:** Claude Opus 5
 

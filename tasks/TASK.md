@@ -21,7 +21,7 @@ que ficou pronto. Níveis de prova (N1..N4) definidos em `docs/PROTOCOLO.md`, §
       e do serialization aqui são 2.4.21. Em tese sobe o KGP para 2.4.21 sem
       conflito, mas isso **não estava confirmado na documentação** — é o primeiro
       lugar a olhar se o build falhar.
-- [ ] **N2 — APK instala e a tela de login aparece** em aparelho real
+- [x] **N2 — APK instala e a tela de login aparece** em aparelho real ✅ 2026-10-28
       *Prova:* `adb install` + print da tela no diário (sem mostrar credenciais).
 
 ## Fase 3 — Funcionar de verdade (precisa de rede sem bloqueio)

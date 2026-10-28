@@ -58,7 +58,7 @@ class ClienteXtream(
         }
 
         val raiz = runCatching { json.parseToJsonElement(corpo) }.getOrNull()
-            ?: return Resultado.Erro(Falha.NenhumEndpointRespondeu)
+            ?: return Resultado.Erro(Falha.NaoEUmPainel)
 
         val userInfo = raiz.objetoOuNulo("user_info")
             ?: return Resultado.Erro(Falha.CredenciaisInvalidas)

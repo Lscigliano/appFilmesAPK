@@ -28,10 +28,15 @@ Isso é legítimo e está dentro do escopo.
 
 O que **não** se faz aqui, em nenhuma hipótese:
 
-- ❌ Commitar usuário, senha, URL completa do painel, token ou qualquer credencial.
+- ❌ Commitar usuário, senha, token ou qualquer credencial de acesso.
 - ❌ Embutir credenciais no código, nos testes, nos *fixtures* ou nos prints de tela.
 - ❌ Burlar DRM, gerar contas, compartilhar acesso ou redistribuir conteúdo.
 - ❌ Publicar no repositório capturas de tela que mostrem o usuário/senha reais.
+
+**Exceção decidida pelo dono (2026-10-28):** o *endereço do painel* vem
+pré-preenchido no app (`core/model/Padroes.kt`), para o usuário final só digitar
+usuário e senha. Endereço de servidor não é credencial — é o mesmo que o app
+oficial mostra na tela da conta. **Usuário e senha continuam proibidos.**
 
 **O repositório é PÚBLICO** (`github.com/Lscigliano/appFilmesAPK`). Qualquer credencial
 commitada vaza na hora e continua no histórico do git mesmo depois de apagada.

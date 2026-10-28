@@ -105,10 +105,32 @@ sealed interface Falha {
                 "Tente pelos dados do celular (4G/5G)."
     }
 
-    data object NenhumEndpointRespondeu : Falha {
+    data object EnderecoInvalido : Falha {
         override val mensagem =
-            "Não foi possível encontrar o servidor deste painel. " +
-                "Confira o endereço digitado."
+            "Endereço inválido. Digite apenas o endereço do servidor, " +
+                "sem \"http\" e sem espaços. Exemplo: meupainel.com"
+    }
+
+    data object NaoEUmPainel : Falha {
+        override val mensagem =
+            "Esse endereço respondeu, mas não é um painel de streaming. " +
+                "Confira o endereço com quem lhe vendeu o acesso."
+    }
+
+    /**
+     * Carrega o resumo do que foi tentado. Sem isso a mensagem vira
+     * "não encontrei" e ninguém consegue agir — nem o usuário, nem quem for
+     * depurar depois.
+     */
+    data class NenhumEndpointRespondeu(
+        val tentativas: Int,
+        val resumo: String,
+    ) : Falha {
+        override val mensagem =
+            "Não encontrei o servidor neste endereço.\n\n" +
+                "Testei $tentativas portas e nenhuma respondeu:\n$resumo\n\n" +
+                "Verifique se digitou o endereço certo e se esta rede não está " +
+                "bloqueando o servidor (teste em outra rede)."
     }
 
     data class SemConexao(val detalhe: String) : Falha {
