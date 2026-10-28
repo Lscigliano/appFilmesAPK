@@ -8,6 +8,58 @@
 
 ---
 
+## [2026-10-28] ⚠️ AVANÇAR FUNCIONA NO APARELHO — minha medição estava contaminada
+**Quem:** Claude Opus 5, contrariado pelo teste real do dono
+
+**Relato do dono, textual:** *"em um filme que deixei abrindo anteriormente,
+quando voltei, estava no início. Então fui para o final, e o player foi na parte
+final e consegui assistir a partir dele sem problemas."*
+
+**Por que isso é grave:** horas antes eu havia concluído, com cinco testes, que
+*"o servidor só entrega a partir do byte 0"* e que **avançar seria impossível**.
+O teste real no aparelho **derruba essa conclusão**. Avançar para o final
+funcionou, e a reprodução seguiu normal a partir de lá.
+
+**Hipótese para a contaminação da minha medição — NÃO confirmada:**
+limitação de taxa por IP ou por token no servidor. Eu disparei **dezenas** de
+requisições com os mesmos tokens, incluindo downloads de 20 MB e três streams
+paralelos. O padrão observado encaixa: a **primeira** entrega de um token novo
+veio completa (2 MB), e **todas** as seguintes vieram cortadas em ~6 KB,
+inclusive a primeira de um token virgem — o que seria explicado se o bloqueio
+fosse do **IP**, já saturado pelos testes anteriores.
+
+**O que fica valendo:**
+1. ❌ **NÃO** escreva código partindo de "o servidor não suporta avançar". Está
+   contrariado pelo uso real.
+2. ⚠️ Minha série de medições sobre posições do arquivo deve ser considerada
+   **suspeita**, não refutada: ela mediu algo real, mas provavelmente o efeito da
+   própria sondagem, não o comportamento normal.
+3. ✅ Continua válido e medido: o servidor **recusa o User-Agent do VLC** com
+   HTTP 500, e o token não expira em pelo menos 34 minutos.
+4. **Como medir direito da próxima vez:** poucas requisições, espaçadas, com
+   token recém-capturado, **e de preferência do mesmo aparelho/rede do uso real**.
+   Sondagem agressiva mede a defesa do servidor, não o serviço dele.
+
+**Outros dois pontos do mesmo relato, para o radar:**
+
+- **Não retoma de onde parou.** O dono voltou a um filme que já tinha aberto e
+  ele começou do início. O app não salva posição por título — é falta de
+  funcionalidade, não defeito. Entra como item de trabalho.
+- **Tela preta ao abrir um filme novo.** O dono relatou ficar olhando tela preta
+  sem saber se ia abrir ("vou aguardar para ver"). O player mostra indicador de
+  carregamento, mas evidentemente não comunica o suficiente. Precisa de texto
+  explícito ("Carregando…"), nome do título e botão de voltar sempre visível
+  enquanto carrega.
+
+**Aprendizado (terceira vez no mesmo dia, e a mais cara):**
+**O ambiente de teste mudou o resultado.** Eu media de um PC, em outra rede, com
+tokens reusados à exaustão — e tratei o resultado como propriedade do servidor.
+Era propriedade da *minha forma de medir*. Quando medição e uso real divergem,
+**o uso real ganha**, e a medição é que precisa ser explicada.
+
+---
+
+
 ## [2026-10-28] Tela preta sem saída — um palpite meu prendeu o usuário
 **Quem:** Claude Opus 5, reportado pelo dono
 
@@ -44,8 +96,14 @@ deixa de depender de os palpites estarem certos.
 ---
 
 
-## [2026-10-28] 🎯 CAUSA RAIZ ENCONTRADA: o servidor só entrega a partir do byte 0
+## [2026-10-28] ~~CAUSA RAIZ ENCONTRADA~~: o servidor só entrega a partir do byte 0
 **Quem:** Claude Opus 5, com URLs capturadas pelo dono
+
+> 🛑 **ESTA ENTRADA ESTÁ CONTRARIADA.** O teste real no aparelho mostrou que
+> **avançar funciona** — ver a entrada "AVANÇAR FUNCIONA NO APARELHO" no topo do
+> diário. A medição abaixo provavelmente capturou limitação de taxa provocada
+> pela própria sondagem, não o comportamento normal do servidor.
+> **Não tome decisão de arquitetura com base nela.**
 
 **Situação:** Depois de todas as hipóteses caírem, faltava explicar por que o filme
 trava ao avançar. Minhas medições anteriores diziam que o servidor suportava

@@ -64,7 +64,7 @@ import java.io.ByteArrayInputStream
 fun TelaPainel(
     urlInicial: String,
     urlRaiz: String,
-    aoCapturarVideo: (url: String) -> Unit,
+    aoCapturarVideo: (url: String, titulo: String) -> Unit,
     aoNavegar: (url: String) -> Unit,
     aoSair: () -> Unit,
 ) {
@@ -165,7 +165,7 @@ fun TelaPainel(
                                 post {
                                     if (jaCapturado.value != url && CapturaDeVideo.ehVideoDoPainel(url)) {
                                         jaCapturado.value = url
-                                        aoCapturarVideo(url)
+                                        aoCapturarVideo(url, tituloLimpo(title))
                                     }
                                 }
                             },
@@ -186,7 +186,7 @@ fun TelaPainel(
                                 if (CapturaDeVideo.ehVideoDoPainel(url)) {
                                     if (jaCapturado.value != url) {
                                         jaCapturado.value = url
-                                        view.post { aoCapturarVideo(url) }
+                                        view.post { aoCapturarVideo(url, tituloLimpo(view.title)) }
                                     }
                                     // Resposta vazia: sem isto o WebView baixaria o
                                     // filme em paralelo com o nosso player, gastando
@@ -366,3 +366,18 @@ private const val JS_OBSERVADOR = """
   }, 1000);
 })();
 """
+
+/**
+ * Nome do filme a partir do título da página.
+ *
+ * O painel usa títulos como "Todo Mundo em Pânico - Pronto para assistir".
+ * Sem esta limpeza o player mostrava o número do arquivo ("440472"), que não
+ * diz nada ao usuário — defeito visto no primeiro uso real.
+ */
+private fun tituloLimpo(bruto: String?): String {
+    val t = bruto?.trim().orEmpty()
+    if (t.isBlank()) return ""
+    return t.substringBefore(" - Pronto para assistir")
+        .substringBefore(" | ")
+        .trim()
+}

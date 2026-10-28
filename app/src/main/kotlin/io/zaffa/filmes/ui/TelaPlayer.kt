@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Forward30
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay10
@@ -42,6 +44,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import android.app.Activity
+import android.content.pm.ActivityInfo
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -100,6 +104,17 @@ fun TelaPlayer(modelo: ModeloPrincipal, titulo: String, url: String) {
         }
     }
 
+    // Tela cheia: em pé, um vídeo 16:9 vira uma faixa fina com tarjas enormes.
+    // Deitado ele ocupa a tela toda. O usuário escolhe — não forçamos rotação.
+    val atividade = contexto as? Activity
+    var deitado by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            atividade?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
+
     var controlesVisiveis by remember { mutableStateOf(true) }
     var arrastando by remember { mutableStateOf(false) }
     var valorArrasto by remember { mutableLongStateOf(0L) }
@@ -155,6 +170,15 @@ fun TelaPlayer(modelo: ModeloPrincipal, titulo: String, url: String) {
                 aoVoltar = modelo::voltarAoPainel,
                 aoAlternar = { if (estado.tocando) motor.pausar() else motor.tocar() },
                 aoTrocarMotor = modelo::trocarMotor,
+                deitado = deitado,
+                aoGirar = {
+                    deitado = !deitado
+                    atividade?.requestedOrientation = if (deitado) {
+                        ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                    } else {
+                        ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+                    }
+                },
                 aoRetroceder = { motor.buscar((estado.posicaoMs - 10_000).coerceAtLeast(0L)) },
                 aoAvancar = { motor.buscar(estado.posicaoMs + 30_000) },
                 aoArrastar = { arrastando = true; valorArrasto = it },
@@ -215,6 +239,8 @@ private fun Controles(
     aoVoltar: () -> Unit,
     aoAlternar: () -> Unit,
     aoTrocarMotor: () -> Unit,
+    deitado: Boolean,
+    aoGirar: () -> Unit,
     aoRetroceder: () -> Unit,
     aoAvancar: () -> Unit,
     aoArrastar: (Long) -> Unit,
@@ -242,6 +268,13 @@ private fun Controles(
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f),
             )
+            IconButton(onClick = aoGirar) {
+                Icon(
+                    imageVector = if (deitado) Icons.Filled.FullscreenExit else Icons.Filled.Fullscreen,
+                    contentDescription = if (deitado) "Sair da tela cheia" else "Tela cheia",
+                    tint = Cores.Texto,
+                )
+            }
             AssistChip(
                 onClick = aoTrocarMotor,
                 label = { Text(motorAtual.rotulo) },

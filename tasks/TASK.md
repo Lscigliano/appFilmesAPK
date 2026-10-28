@@ -51,7 +51,28 @@ que ficou pronto. Níveis de prova (N1..N4) definidos em `docs/PROTOCOLO.md`, §
       (hoje o release sai assinado com a chave de debug — instala, mas não
       permite atualizar por cima se a chave mudar). Ver `docs/DISTRIBUICAO.md`.
 
-## Fase 5 — Depois
+## Fase 5 — Vindos do uso real (prioridade do dono)
+
+- [x] Tela inicial própria, no estilo do app de referência ✅ 2026-10-28
+- [x] Tela de login própria ✅ 2026-10-28
+- [x] Nome do filme no player, em vez do número do arquivo ✅ 2026-10-28
+- [x] Botão de tela cheia (vídeo em pé vira faixa fina com tarjas) ✅ 2026-10-28
+- [ ] **Retomar de onde parou.** O dono voltou a um filme e ele começou do zero.
+      Guardar posição por título, e oferecer "continuar de HH:MM" ao abrir.
+- [ ] **Comunicar melhor o carregamento.** O dono ficou olhando tela preta sem
+      saber se o filme ia abrir. Mostrar nome do título, "Carregando…" e botão
+      de voltar sempre visível enquanto carrega.
+- [ ] Confirmar os caminhos de Favoritos e Continuar (os outros três já foram).
+- [ ] **Categorias próprias**: deixar o dono mover um filme para a seção que ele
+      quiser, independente do que o painel diz. Exige catálogo nosso — ver Fase 6.
+
+## Fase 6 — Catálogo próprio (projeto grande, ainda não iniciado)
+
+O dono quer recategorizar títulos no app dele. Isso só é possível com os dados do
+catálogo na nossa mão, o que hoje não acontece: o catálogo é a página do painel.
+Primeiro passo é mapear como o painel entrega a lista de filmes.
+
+## Fase 7 — Depois
 
 - [ ] Séries (temporadas/episódios) e canais ao vivo
 - [ ] "Continuar assistindo" — salvar posição por filme

@@ -139,10 +139,13 @@ class ModeloPrincipal(aplicacao: Application) : AndroidViewModel(aplicacao) {
      * É o momento central do app: a partir daqui o vídeo deixa de ser
      * responsabilidade do painel e passa a ser do nosso player.
      */
-    fun aoCapturarVideo(url: String) {
+    fun aoCapturarVideo(url: String, tituloDaPagina: String = "") {
         if (!CapturaDeVideo.ehVideoDoPainel(url)) return
         if ((_tela.value as? Tela.Player)?.url == url) return
-        _tela.value = Tela.Player(url = url, titulo = CapturaDeVideo.identificador(url))
+        // O título da página é o nome do filme. Sem ele sobra o número do
+        // arquivo, que não diz nada a quem está assistindo.
+        val titulo = tituloDaPagina.ifBlank { CapturaDeVideo.identificador(url) }
+        _tela.value = Tela.Player(url = url, titulo = titulo)
     }
 
     /**
