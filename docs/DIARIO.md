@@ -8,6 +8,64 @@
 
 ---
 
+## [2026-10-28] Fechamento da sessão: de player avulso a app próprio
+**Quem:** Claude Opus 5, com o dono testando cada entrega no aparelho
+
+**Onde o dia terminou:** o app faz login na nossa tela, mostra tela inicial e
+catálogo próprios, navega por categorias, abre o filme direto no nosso player e
+toca TV ao vivo. O travamento ao avançar — motivo original do projeto — foi
+resolvido e confirmado pelo dono em 5G e WiFi.
+
+**Qualidade do vídeo (medida, não suposta):** li o cabeçalho MP4 de um título
+real. `H.264 + AAC, 1080p, 2,98 Mbps, áudio em português, 2.455 MB para 1h55m`.
+**Não é 4K e não existe seleção de qualidade** — o servidor entrega um único
+arquivo por título, sem streaming adaptativo. Nenhum app muda isso.
+
+**Descoberta que explicou o catálogo incompleto:** apareciam ~301 títulos de um
+acervo maior, e eu culpei a rolagem. A causa era outra: a página de Filmes é uma
+**vitrine com 38 carrosséis por categoria**, cada um mostrando só os primeiros
+itens. Rolar nunca traria tudo — **o acervo só é alcançável entrando nas
+categorias**. Padrão confirmado com três amostras do dono:
+`index.php?page=moviecat&id=...`.
+
+**Arquitetura final:**
+```
+nossa tela de login  →  nossa tela inicial  →  nosso catálogo (capas, busca,
+                                                categorias)
+                                                     ↓
+                            página de detalhe INVISÍVEL (só para o painel
+                            emitir o token do vídeo — pedir direto dá 502)
+                                                     ↓
+                                              nosso player
+                                      (ExoPlayer ⇄ VLC, recuperação automática)
+```
+
+**Aprendizado da sessão inteira — o que eu faria diferente:**
+1. **Medir antes de arquitetar.** Um dia de código assentou sobre "parece Xtream
+   Codes". A primeira URL real desmontou tudo em dez minutos.
+2. **Medir a coisa certa.** Conferi código HTTP e cabeçalho por horas sem olhar
+   `size_download`. Um `206` pode entregar 6 KB de 1 MB prometido.
+3. **Não reconstruir requisição de autenticação nunca vista funcionar.** O login
+   nativo recusava senha correta porque eu montei a requisição a partir do HTML.
+   A solução foi parar de reconstruir: o WebView invisível usa o formulário do
+   próprio painel.
+4. **Palpite precisa de caminho de falha no mesmo commit.** Documentar que um
+   valor é incerto não protege ninguém — a tela preta sem saída provou isso.
+5. **O usuário na frente da tela vence a medição remota.** Três correções dele
+   derrubaram conclusões minhas: o reCAPTCHA inexistente, o limite de conexões
+   que não era a causa, e "avancei para o fim e funcionou" contra cinco testes
+   meus dizendo o contrário.
+
+**Em aberto, por ordem de valor para o uso diário:**
+- Retomar de onde parou (hoje o filme recomeça do zero)
+- Categorias próprias: mover um título para a seção que o dono quiser
+- Confirmar os caminhos de Favoritos e Continuar
+- Versão para navegador (repositório appFilmesWEB, com a descoberta do CORS
+  liberado já registrada)
+
+---
+
+
 ## [2026-10-28] ⚠️ AVANÇAR FUNCIONA NO APARELHO — minha medição estava contaminada
 **Quem:** Claude Opus 5, contrariado pelo teste real do dono
 

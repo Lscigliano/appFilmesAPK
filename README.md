@@ -31,13 +31,15 @@ Não precisa de Android Studio, nem de Java, nem de nada instalado.
 
 ## O que está pronto
 
-- [x] Login com **detecção automática do servidor** (testa portas e protocolos)
-- [x] Catálogo de filmes com capas, categorias e busca
-- [x] Player com **dois motores** (ExoPlayer e VLC) e troca em um toque
-- [x] Mensagens de erro que dizem a causa real (rede bloqueando, limite de telas,
-      conta expirada) em vez de "erro desconhecido"
-- [ ] Séries e canais ao vivo
-- [ ] Continuar assistindo de onde parou, entre sessões
+- [x] **Tela de login própria** — o app entra sozinho nas próximas vezes
+- [x] **Tela inicial própria**, com atalhos para TV, Filmes, Séries, Favoritos e Continuar
+- [x] **Catálogo próprio**: grade de capas, busca e as categorias do painel
+- [x] **Do catálogo direto para o player**, sem passar pela página do painel
+- [x] **Player com dois motores** (ExoPlayer e VLC), trocáveis sem perder a posição
+- [x] **Recuperação automática**: falhou ao avançar, ele reabre e continua
+- [x] **TV ao vivo e rádio** no nosso player, com indicador AO VIVO
+- [ ] Retomar de onde parou
+- [ ] Categorias próprias (mover um título para a seção que você quiser)
 - [ ] Versão para navegador
 
 Estado detalhado: [`tasks/TASK.md`](tasks/TASK.md).

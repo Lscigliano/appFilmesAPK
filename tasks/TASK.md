@@ -1,97 +1,61 @@
-# TASK.md — plano ativo
+# TASK.md — estado do projeto
 
-Atualizado em 2026-10-28. Itens são **verificáveis**: cada um diz como provar
-que ficou pronto. Níveis de prova (N1..N4) definidos em `docs/PROTOCOLO.md`, §5.
-
----
-
-## Fase 1 — Fundação ✅
-
-- [x] Repositório criado, `.gitignore` protegendo credenciais
-- [x] Protocolo e diário escritos (`docs/PROTOCOLO.md`, `docs/DIARIO.md`)
-- [x] Toolchain confirmado contra documentação oficial (AGP 9.4.1, Gradle 9.8.2,
-      JDK 17, compileSdk 36, Compose BOM 2026.06.01)
-- [x] Detector de API + diagnóstico de busca (`ferramentas/detectar-api.mjs`)
-
-## Fase 2 — App compilando **(em andamento)**
-
-- [x] **N1 — `./gradlew :app:assembleDebug` termina em BUILD SUCCESSFUL** ✅ 2026-10-28
-      *Prova:* colar a última linha do build no diário.
-      *Risco conhecido:* o AGP 9.4.1 embute Kotlin 2.2.10 e os plugins do Compose
-      e do serialization aqui são 2.4.21. Em tese sobe o KGP para 2.4.21 sem
-      conflito, mas isso **não estava confirmado na documentação** — é o primeiro
-      lugar a olhar se o build falhar.
-- [x] **N2 — APK instala e a tela de login aparece** em aparelho real ✅ 2026-10-28
-      *Prova:* `adb install` + print da tela no diário (sem mostrar credenciais).
-
-## Fase 3 — Funcionar de verdade (precisa de rede sem bloqueio)
-
-> ⚠️ Nada desta fase pode ser testado na rede corporativa — o filtro Sophos
-> bloqueia o painel. Ver diário, 2026-10-28. Faça em casa ou no 4G/5G.
-
-- [x] ~~Detectar a API~~ — resolvido de outro jeito: a URL do vídeo foi capturada no navegador e o painel NÃO é Xtream. Ver diário.
-      Isso responde de uma vez: qual API, qual porta, e **se o servidor aceita
-      busca por posição**.
-- [ ] **N3 — login autentica e o catálogo lista filmes com capa**
-- [ ] **N3 — um filme abre e toca** nos dois motores
-- [x] **N4 — AVANÇAR O FILME FUNCIONA** ✅ 2026-10-28 — testado pelo dono em 5G e WiFi, filme e TV.
-      *Prova obrigatória no diário, para cada motor:*
-      | Motor | Avançar 30 s | Arrastar p/ metade | Voltar 10 s | Observação |
-      |---|---|---|---|---|
-      | ExoPlayer | ? | ? | ? | |
-      | VLC | ? | ? | ? | |
-- [ ] Definir qual motor vira o **padrão** com base na tabela acima, e registrar
-      o porquê no diário.
-
-## Fase 4 — Distribuição
-
-- [x] CI publica APK em Releases a cada push na `main` ✅ 2026-10-28
-      *Prova:* link do release com o `.apk` anexado.
-- [ ] Criar chave de assinatura própria e guardar como secret do GitHub
-      (hoje o release sai assinado com a chave de debug — instala, mas não
-      permite atualizar por cima se a chave mudar). Ver `docs/DISTRIBUICAO.md`.
-
-## Fase 5 — Vindos do uso real (prioridade do dono)
-
-- [x] Tela inicial própria, no estilo do app de referência ✅ 2026-10-28
-- [x] Tela de login própria ✅ 2026-10-28
-- [x] Nome do filme no player, em vez do número do arquivo ✅ 2026-10-28
-- [x] Botão de tela cheia (vídeo em pé vira faixa fina com tarjas) ✅ 2026-10-28
-- [ ] **Retomar de onde parou.** O dono voltou a um filme e ele começou do zero.
-      Guardar posição por título, e oferecer "continuar de HH:MM" ao abrir.
-- [ ] **Comunicar melhor o carregamento.** O dono ficou olhando tela preta sem
-      saber se o filme ia abrir. Mostrar nome do título, "Carregando…" e botão
-      de voltar sempre visível enquanto carrega.
-- [ ] Confirmar os caminhos de Favoritos e Continuar (os outros três já foram).
-- [ ] **Categorias próprias**: deixar o dono mover um filme para a seção que ele
-      quiser, independente do que o painel diz. Exige catálogo nosso — ver Fase 6.
-
-## Fase 6 — Catálogo próprio (projeto grande, ainda não iniciado)
-
-O dono quer recategorizar títulos no app dele. Isso só é possível com os dados do
-catálogo na nossa mão, o que hoje não acontece: o catálogo é a página do painel.
-Primeiro passo é mapear como o painel entrega a lista de filmes.
-
-## Fase 7 — Depois
-
-- [ ] Séries (temporadas/episódios) e canais ao vivo
-- [ ] "Continuar assistindo" — salvar posição por filme
-- [ ] Navegação por controle remoto (D-pad) para TV Box
-- [ ] Versão para navegador, reaproveitando `io.zaffa.filmes.core`
+Atualizado em 2026-10-28, fim da primeira sessão.
+Itens são **verificáveis**. Níveis de prova (N1..N4) em `docs/PROTOCOLO.md`, §5.
 
 ---
 
-## Revisão da sessão de 2026-10-28
+## ✅ Entregue e confirmado no aparelho
 
-**Feito:** estrutura do repositório, protocolo, diário, detector de API com
-diagnóstico de HTTP Range, app completo (login com detecção automática, catálogo,
-player com dois motores e troca sem perder posição), CI de build.
+- [x] **N1** — compila (`./gradlew :app:assembleDebug`)
+- [x] **N2** — instala e abre
+- [x] **N3** — login, catálogo e reprodução funcionam
+- [x] **N4** — **avançar o filme funciona** ← o objetivo do projeto
+      *Confirmado pelo dono em 5G e em WiFi, filme e TV.*
+- [x] CI publica APK em Releases a cada push
+- [x] Tela de login própria (WebView invisível envia o formulário do painel)
+- [x] "Lembrar meus dados" — o app entra sozinho
+- [x] Tela inicial própria, cinco atalhos cabendo na tela
+- [x] Catálogo próprio: grade de capas, busca, contagem de títulos
+- [x] Categorias do painel como chips (padrão `page=moviecat&id=...`)
+- [x] Botão de atualizar lista
+- [x] Do catálogo **direto para o nosso player**, sem passar pela página do painel
+- [x] Player: dois motores trocáveis, recuperação automática, tela cheia deitada
+- [x] TV ao vivo e rádio no nosso player (HLS), com indicador **AO VIVO**
+- [x] Nome do filme no player, em vez do número do arquivo
 
-**Descoberto:** a rede corporativa bloqueia o painel (filtro Sophos devolvendo 502);
-o portal `portal.exemplo` é um painel CORE atrás de Cloudflare e não responde
-`player_api.php`; o AGP 9 mudou o suficiente para quebrar builds escritos para
-AGP 8; Compose 1.12+ exigiria um SDK que a máquina não tem.
+## 🔜 Próximos, por valor no uso diário
 
-**Pendente e importante:** nada da Fase 3 pôde ser validado contra o servidor real.
-O app está escrito para descobrir a API sozinho, mas **isso ainda não foi provado
-contra o painel**. É o primeiro trabalho da próxima sessão, em rede liberada.
+- [ ] **Retomar de onde parou.** Hoje o filme sempre recomeça do zero — é a falta
+      mais sentida. Guardar posição por título e oferecer "continuar de HH:MM".
+- [ ] **Categorias próprias.** O dono quer mover um título de "Ação" para
+      "Aventura" no app dele. Agora é viável: o catálogo é nosso, basta guardar
+      as marcações dele e aplicá-las por cima das do painel.
+- [ ] **Confirmar Favoritos e Continuar.** Os caminhos são palpite; se falharem,
+      o app cai na raiz do painel e avisa (não trava).
+- [ ] Rádio e TV no **nosso catálogo**, não só no nosso player.
+
+## 📋 Fatos medidos — não re-descubra
+
+| Pergunta | Resposta | Como foi medido |
+|---|---|---|
+| Qualidade do vídeo | **1080p, H.264+AAC, ~3 Mbps** | cabeçalho MP4 de um título real |
+| Tem 4K? Dá para escolher? | **Não** para ambos | servidor entrega **um** arquivo por título |
+| User-Agent do VLC | **HTTP 500** | o servidor recusa; o UA é mascarado em `Padroes.USER_AGENT` |
+| Pedir o MP4 sem token | **502** | só o painel emite token |
+| Token expira? | Não em 34 min | monitor a cada 2 min |
+| Conexões simultâneas do plano | **1** | tela "Meu perfil" do painel |
+| CORS no servidor de vídeo | **`Allow-Origin: *`** | viabiliza o projeto web |
+| Endereços das seções | `livetv`, `movies`, `series` ✅ · `favorites`, `watchhistory` ⚠️ | confirmados pelo dono no navegador |
+| Categorias | `index.php?page=moviecat&id=...` | três amostras do dono |
+
+## ⚠️ Armadilhas registradas
+
+1. **O catálogo completo não sai da página principal.** Ela é uma vitrine de 38
+   carrosséis; o acervo está dentro das categorias.
+2. **Medir `206` não é medir entrega.** Confira bytes recebidos, não só status.
+3. **Não automatize login reconstruindo a requisição.** Use o formulário do
+   painel pelo WebView.
+4. **Nenhum palpite pode levar a tela sem saída.** Ver `tasks/lessons.md`.
+5. **Não compile dentro do OneDrive.** As travas de arquivo quebram o build;
+   `settings.gradle.kts` já desvia a saída para fora.
