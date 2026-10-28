@@ -3,7 +3,6 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.compose.compiler)
-    alias(libs.plugins.kotlin.serialization)
 }
 
 // Assinatura opcional: se existir keystore.properties na raiz (IGNORADO pelo git),
@@ -101,18 +100,10 @@ dependencies {
     // Motor de vídeo 1 — ExoPlayer
     implementation(libs.media3.exoplayer)
     implementation(libs.media3.exoplayer.hls)
-    implementation(libs.media3.datasource.okhttp)
     implementation(libs.media3.ui)
 
     // Motor de vídeo 2 — libVLC (tolera servidores que ignoram Range)
     implementation(libs.libvlc)
 
-    implementation(libs.ktor.client.core)
-    implementation(libs.ktor.client.okhttp)
-    implementation(libs.ktor.client.content.negotiation)
-    implementation(libs.ktor.serialization.json)
-    implementation(libs.kotlinx.serialization.json)
 
-    implementation(libs.coil.compose)
-    implementation(libs.coil.network.okhttp)
 }

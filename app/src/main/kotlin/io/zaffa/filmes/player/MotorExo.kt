@@ -12,7 +12,7 @@ import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
-import io.zaffa.filmes.core.api.ClienteXtream
+import io.zaffa.filmes.core.model.Padroes
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -43,9 +43,12 @@ class MotorExo(context: Context) : MotorVideo {
     private val _estado = MutableStateFlow(EstadoPlayer())
     override val estado: StateFlow<EstadoPlayer> = _estado
 
+    /** Quantas vezes já tentamos retomar desde a última reprodução bem-sucedida. */
+    private var tentativasDeRecuperacao = 0
+
     private val player: ExoPlayer = run {
         val httpFactory = DefaultHttpDataSource.Factory()
-            .setUserAgent(ClienteXtream.UA)
+            .setUserAgent(Padroes.USER_AGENT)
             .setAllowCrossProtocolRedirects(true)
             .setConnectTimeoutMs(TIMEOUT_MS)
             .setReadTimeoutMs(TIMEOUT_MS)
@@ -81,16 +84,52 @@ class MotorExo(context: Context) : MotorVideo {
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
+            // Voltou a tocar: a recuperação deu certo, então o orçamento de
+            // tentativas é devolvido. Sem isto, três engasgos ao longo de um
+            // filme de duas horas esgotariam as tentativas e o quarto viraria
+            // travamento permanente.
+            if (isPlaying) tentativasDeRecuperacao = 0
             _estado.update { it.copy(tocando = isPlaying) }
         }
 
+        /**
+         * RECUPERAÇÃO AUTOMÁTICA — o coração da correção do bug relatado.
+         *
+         * Sintoma do app oficial: "avanço o filme para a metade e ele trava e não
+         * volta mais". Medimos o servidor e ele **não** tem culpa — devolve 206
+         * para qualquer posição em ~0,27s. Ou seja, quando a conexão falha depois
+         * de um avanço, **basta tentar de novo**; o app oficial simplesmente
+         * desiste e fica congelado para sempre.
+         *
+         * Aqui, em vez de desistir, reabrimos o fluxo na posição em que o usuário
+         * estava. O resultado é uma engasgada de um ou dois segundos no lugar de
+         * um travamento permanente.
+         */
         override fun onPlayerError(error: PlaybackException) {
-            // A mensagem crua do ExoPlayer pode conter a URL — e a URL do Xtream
-            // carrega usuário e senha no caminho. Expor só o código do erro.
+            val posicao = player.currentPosition.coerceAtLeast(0L)
+
+            if (tentativasDeRecuperacao < MAX_TENTATIVAS) {
+                tentativasDeRecuperacao++
+                _estado.update {
+                    it.copy(
+                        carregando = true,
+                        erro = null,
+                        posicaoMs = posicao,
+                    )
+                }
+                player.prepare()
+                player.seekTo(posicao)
+                player.playWhenReady = true
+                return
+            }
+
+            // Esgotadas as tentativas: aí sim avisamos, e sugerimos o outro motor.
+            // A mensagem crua do ExoPlayer pode conter a URL — e a URL carrega o
+            // token de acesso. Expor só o código do erro.
             _estado.update {
                 it.copy(
-                    erro = "Falha no ExoPlayer (${error.errorCodeName}). " +
-                        "Tente trocar para o motor VLC.",
+                    erro = "Não consegui retomar o filme nesta posição " +
+                        "(${error.errorCodeName}). Tente trocar para o motor VLC.",
                     carregando = false,
                 )
             }
@@ -143,5 +182,14 @@ class MotorExo(context: Context) : MotorVideo {
 
     private companion object {
         const val TIMEOUT_MS = 30_000
+
+        /**
+         * Tentativas de retomada antes de desistir e avisar o usuário.
+         *
+         * Cinco é folgado de propósito: uma falha de rede passageira não pode
+         * custar o filme. O contador zera sempre que a reprodução volta, então
+         * o limite vale por incidente, não pelo filme inteiro.
+         */
+        const val MAX_TENTATIVAS = 5
     }
 }

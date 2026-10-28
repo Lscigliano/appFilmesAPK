@@ -49,7 +49,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.zaffa.filmes.core.model.Filme
+
 import io.zaffa.filmes.player.Motor
 import io.zaffa.filmes.player.MotorExo
 import io.zaffa.filmes.player.MotorVideo
@@ -66,7 +66,7 @@ import java.util.Locale
  * de onde parou. É a diferença entre "o app travou" e "resolvi em um toque".
  */
 @Composable
-fun TelaPlayer(modelo: ModeloPrincipal, filme: Filme, url: String) {
+fun TelaPlayer(modelo: ModeloPrincipal, titulo: String, url: String) {
     val contexto = LocalContext.current
     val motorEscolhido by modelo.motor.collectAsStateWithLifecycle()
 
@@ -112,7 +112,7 @@ fun TelaPlayer(modelo: ModeloPrincipal, filme: Filme, url: String) {
         }
     }
 
-    BackHandler { modelo.voltarAoCatalogo() }
+    BackHandler { modelo.voltarAoPainel() }
 
     Box(
         Modifier
@@ -140,19 +140,19 @@ fun TelaPlayer(modelo: ModeloPrincipal, filme: Filme, url: String) {
                 mensagem = mensagem,
                 motorAtual = motorEscolhido,
                 aoTrocarMotor = modelo::trocarMotor,
-                aoVoltar = modelo::voltarAoCatalogo,
+                aoVoltar = modelo::voltarAoPainel,
                 modifier = Modifier.align(Alignment.Center),
             )
         }
 
         if (controlesVisiveis) {
             Controles(
-                filme = filme,
+                titulo = titulo,
                 motorAtual = motorEscolhido,
                 tocando = estado.tocando,
                 posicaoMs = if (arrastando) valorArrasto else estado.posicaoMs,
                 duracaoMs = estado.duracaoMs,
-                aoVoltar = modelo::voltarAoCatalogo,
+                aoVoltar = modelo::voltarAoPainel,
                 aoAlternar = { if (estado.tocando) motor.pausar() else motor.tocar() },
                 aoTrocarMotor = modelo::trocarMotor,
                 aoRetroceder = { motor.buscar((estado.posicaoMs - 10_000).coerceAtLeast(0L)) },
@@ -207,7 +207,7 @@ private fun PainelDeErro(
 
 @Composable
 private fun Controles(
-    filme: Filme,
+    titulo: String,
     motorAtual: Motor,
     tocando: Boolean,
     posicaoMs: Long,
@@ -235,7 +235,7 @@ private fun Controles(
                 Icon(Icons.Filled.ArrowBack, contentDescription = "Voltar", tint = Cores.Texto)
             }
             Text(
-                text = filme.nome,
+                text = titulo,
                 color = Cores.Texto,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

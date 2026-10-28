@@ -1,29 +1,46 @@
 package io.zaffa.filmes.core.model
 
 /**
- * Valores que o app já vem preenchendo, para o usuário final não precisar
- * descobrir nada: abre o app, digita usuário e senha, assiste.
+ * Valores que o app já vem preenchido, para o usuário final não precisar
+ * descobrir nada: abre o app, faz o login do painel, assiste.
  *
- * Decisão do dono do projeto: o endereço do servidor vem pronto, mas **continua
- * editável** na tela de login — quem tiver outro painel é só trocar.
- *
- * NOTA DE PRIVACIDADE: aqui mora apenas o *endereço do painel*, que é público
- * (é o mesmo que o app oficial mostra na tela da conta). **Usuário e senha nunca
- * entram neste arquivo nem em nenhum outro do repositório** — eles vivem só no
- * armazenamento privado do aparelho. Ver docs/PROTOCOLO.md, seção 2.
+ * NOTA DE PRIVACIDADE: aqui mora apenas o *endereço do painel*, que é público.
+ * **Usuário e senha nunca entram neste arquivo nem em nenhum outro do
+ * repositório** — o login é feito pela própria página do painel, e a sessão fica
+ * nos cookies do WebView. Ver docs/PROTOCOLO.md, seção 2.
  */
 object Padroes {
 
     /**
-     * Endereço que aparece pré-preenchido na tela de login.
+     * Endereço do painel que o app abre ao iniciar.
      *
-     * ⚠️ Este endereço **ainda não foi confirmado como o host da API**: ele é o
-     * que o app oficial exibe na tela da conta, mas não respondeu em nenhuma das
-     * redes testadas (ver docs/DIARIO.md). Quando o endereço real for descoberto
-     * — lendo-o dentro do app oficial —, troque aqui e pronto: todo mundo que
-     * instalar o APK passa a abrir já no servidor certo.
+     * Confirmado funcionando em 2026-10-28: é por aqui que se faz login, navega
+     * o catálogo e se obtém a URL do filme com token.
      *
-     * Deixar vazio ("") faz o campo abrir em branco.
+     * (O endereço que o app oficial exibe na tela da conta — outro domínio — está
+     * morto: não respondeu em 3 redes e 11 portas. Ver docs/DIARIO.md.)
      */
-    const val SERVIDOR: String = "pfsv.io"
+    const val PAINEL_URL: String = "http://vouver.me/"
+
+    /**
+     * User-Agent usado em **todas** as requisições do app: WebView, ExoPlayer e
+     * libVLC.
+     *
+     * ⚠️ REQUISITO MEDIDO, NÃO PREFERÊNCIA. O servidor de vídeo responde
+     * **HTTP 500** quando o User-Agent se identifica como VLC:
+     *
+     * ```
+     * UA='okhttp/4.12.0'             -> HTTP 206  ✅
+     * UA='Mozilla/5.0'               -> HTTP 206  ✅
+     * UA='VLC/3.0.20 LibVLC/3.0.20'  -> HTTP 500  ❌
+     * ```
+     *
+     * Ou seja: usar o motor libVLC **sem mascarar o User-Agent torna o vídeo
+     * impossível de tocar**. Esta é a principal suspeita para o travamento do
+     * app oficial. Nunca remova a configuração de UA dos motores.
+     * (Medição em 2026-10-28, ver docs/DIARIO.md.)
+     */
+    const val USER_AGENT: String =
+        "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) " +
+            "Chrome/131.0.0.0 Mobile Safari/537.36"
 }

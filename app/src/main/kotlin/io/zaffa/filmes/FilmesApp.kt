@@ -1,49 +1,25 @@
 package io.zaffa.filmes
 
 import android.app.Application
-import io.ktor.client.HttpClient
-import io.ktor.client.engine.okhttp.OkHttp
-import io.ktor.client.plugins.HttpTimeout
-import io.zaffa.filmes.core.api.DetectorApi
-import io.zaffa.filmes.data.Sessao
+import io.zaffa.filmes.data.Preferencias
 
 /**
  * Container de dependências, feito à mão.
  *
- * Decisão consciente de NÃO usar Hilt: o projeto é pequeno e precisa ser legível
- * para quem (ou qual IA) chegar depois sem contexto nenhum. Três objetos num
- * `Application` são mais fáceis de seguir do que um grafo anotado.
- * Ver docs/PROTOCOLO.md, seção 4.
+ * Ficou pequeno de propósito. O app não fala com nenhuma API: quem conversa com
+ * o painel é a própria página dele, dentro do WebView. O que sobra para o app é
+ * capturar a URL do vídeo e tocá-la no nosso player.
+ *
+ * Decisão consciente de NÃO usar Hilt: um objeto num `Application` é mais legível
+ * para quem (ou qual IA) chegar depois sem contexto.
  */
 class FilmesApp : Application() {
 
-    lateinit var http: HttpClient
-        private set
-
-    lateinit var sessao: Sessao
-        private set
-
-    lateinit var detector: DetectorApi
+    lateinit var preferencias: Preferencias
         private set
 
     override fun onCreate() {
         super.onCreate()
-
-        http = HttpClient(OkHttp) {
-            // Sem isto, um painel fora do ar deixa o app pendurado para sempre.
-            // Os valores são folgados de propósito: estes servidores são lentos
-            // para responder depois de um seek grande.
-            install(HttpTimeout) {
-                connectTimeoutMillis = 20_000
-                requestTimeoutMillis = 40_000
-                socketTimeoutMillis = 40_000
-            }
-            // Redirecionamento http→https ou para CDN é rotina nestes painéis.
-            followRedirects = true
-            expectSuccess = false
-        }
-
-        sessao = Sessao(this)
-        detector = DetectorApi(http)
+        preferencias = Preferencias(this)
     }
 }

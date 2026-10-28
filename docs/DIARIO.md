@@ -8,6 +8,75 @@
 
 ---
 
+## [2026-10-28] A arquitetura inteira estava errada — e o dono derrubou minha conclusão
+**Quem:** Claude Opus 5, com o dono coletando evidência no navegador
+
+**Situação:** O app estava escrito como cliente **Xtream Codes**, com login, catálogo
+e detecção de endpoint próprios. Nada disso tinha sido validado contra o servidor.
+
+**Ação:** O dono abriu um filme no navegador, logado, e capturou no DevTools a URL
+que o player usa.
+
+**Resultado — a URL respondeu quase tudo:**
+```
+http://<ip-do-servidor-de-video>/vauth/<numero>.mp4?token=<token-longo>
+```
+Medições feitas sobre ela:
+
+| Teste | Resultado | Conclusão |
+|---|---|---|
+| `Range` no início / meio / 3-4 / fim | **206 em ~0,27s** em todos | o servidor **suporta avançar perfeitamente** |
+| 2 conexões simultâneas | ambas 206 | não é limite de telas |
+| Token adulterado | 502 | o token é validado |
+| Token após 9 min | 206 | não expira rápido |
+| **User-Agent `VLC/3.0.20 LibVLC/3.0.20`** | **500** | **o servidor recusa o VLC** |
+| `Access-Control-Allow-Origin` | `*` | o projeto web é viável |
+| Pedir o MP4 **sem** token | **502** | só o painel emite token |
+
+**O que isso derrubou:**
+1. **Não é Xtream Codes.** Prova dupla: `player_api.php` dá 404, e o ID do filme é
+   texto (`oev_z4A`), não `stream_id` numérico. **Todo o cliente Xtream foi removido**
+   — estava bem escrito, para o protocolo errado.
+2. **O endereço que o app oficial exibe está morto** e nunca foi o host da API.
+3. **Nenhuma das minhas hipóteses sobre o travamento se sustentou**, exceto uma: o
+   servidor devolve **HTTP 500** para o User-Agent do VLC. Como o app oficial deixa
+   escolher o motor, isso explica o sintoma relatado desde o início — trava no
+   celular do dono, funciona no da esposa, mesma conta.
+4. O painel **mistura fontes**: trailer do YouTube embutido em alguns títulos, MP4
+   próprio em outros. Um player que só espera MP4 fica girando para sempre nos
+   trailers — sintoma que o dono viu e eu quase diagnostiquei como bug nosso.
+
+**Correção que o dono me fez, e que eu deveria ter evitado:** afirmei que o login do
+painel "tem reCAPTCHA", baseado **apenas no nome de um campo escondido**
+(`recaptcha_response`). Ele respondeu que nunca viu desafio nenhum. Conferi o HTML:
+**não há script do Google nem sitekey** — o recurso existe no software do painel e
+está **desligado**. Eu havia transformado um indício fraco em fato declarado, e usado
+isso para justificar uma decisão de arquitetura.
+
+**Nova arquitetura (híbrida):** o app carrega a página do painel num WebView — login,
+catálogo e regras de reprodução são dele. O app **intercepta a URL do vídeo com token**
+e desvia para o nosso player, com ExoPlayer e libVLC trocáveis. Motivos, agora
+baseados em medição e não em suposição:
+- só o painel emite o token (pedido direto = 502);
+- só o painel sabe quando é trailer do YouTube e quando é MP4;
+- o catálogo nunca desatualiza, e mudanças de layout não quebram o app.
+
+**Aprendizado:**
+1. **Medir antes de arquitetar.** Um dia inteiro de código assentou sobre "parece
+   Xtream". A primeira URL real desmontou tudo em dez minutos. O diário já marcava a
+   suposição como não confirmada — o erro não foi supor, foi *construir* sobre a
+   suposição em vez de medir primeiro.
+2. **Não transformar indício em fato na fala.** "O formulário tem um campo de
+   reCAPTCHA" ≠ "o login tem reCAPTCHA". A diferença mudou uma decisão de projeto.
+3. **O usuário que está vendo a tela sabe coisas que nenhuma medição remota dá.**
+   Duas correções dele — "não vejo reCAPTCHA" e "esse é o trailer, não o filme" —
+   valeram mais que horas de sondagem de rede.
+4. O User-Agent deixou de ser detalhe e virou **requisito documentado** em
+   `core/model/Padroes.kt`, com a tabela da medição junto ao código.
+
+---
+
+
 ## [2026-10-28] Primeiro teste em aparelho real — N2 atingido, e o usuário achou dois defeitos
 **Quem:** Claude Opus 5, com o dono testando no celular
 

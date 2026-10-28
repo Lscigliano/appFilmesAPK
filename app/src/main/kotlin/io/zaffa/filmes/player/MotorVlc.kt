@@ -3,7 +3,7 @@ package io.zaffa.filmes.player
 import android.content.Context
 import android.net.Uri
 import android.view.View
-import io.zaffa.filmes.core.api.ClienteXtream
+import io.zaffa.filmes.core.model.Padroes
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.update
@@ -43,7 +43,7 @@ class MotorVlc(context: Context) : MotorVideo {
             "--no-drop-late-frames",
             "--no-skip-frames",
             "--http-reconnect",
-            "--http-user-agent=${ClienteXtream.UA}",
+            "--http-user-agent=${Padroes.USER_AGENT}",
             "--audio-time-stretch",
             "-vv",
         ),
@@ -52,11 +52,18 @@ class MotorVlc(context: Context) : MotorVideo {
     private val player = MediaPlayer(libVlc)
     private var layout: VLCVideoLayout? = null
 
+    /** Guardados para conseguir reabrir o fluxo exatamente onde parou. */
+    private var urlAtual: String? = null
+    private var tentativasDeRecuperacao = 0
+
     init {
         player.setEventListener { evento ->
             when (evento.type) {
-                MediaPlayer.Event.Playing ->
+                MediaPlayer.Event.Playing -> {
+                    // Voltou a tocar: devolve o orçamento de tentativas.
+                    tentativasDeRecuperacao = 0
                     _estado.update { it.copy(tocando = true, carregando = false, erro = null) }
+                }
 
                 MediaPlayer.Event.Paused, MediaPlayer.Event.Stopped ->
                     _estado.update { it.copy(tocando = false) }
@@ -74,14 +81,27 @@ class MotorVlc(context: Context) : MotorVideo {
                 MediaPlayer.Event.EndReached ->
                     _estado.update { it.copy(terminou = true, tocando = false) }
 
-                MediaPlayer.Event.EncounteredError ->
-                    _estado.update {
-                        it.copy(
-                            erro = "Falha no VLC ao abrir o vídeo. " +
-                                "Tente trocar para o motor ExoPlayer.",
-                            carregando = false,
-                        )
+                // RECUPERAÇÃO AUTOMÁTICA — mesmo princípio do MotorExo.
+                // O servidor devolve qualquer trecho do filme em ~0,27s (medido),
+                // então uma falha depois de avançar é passageira: reabrir resolve.
+                // Travar para sempre, como faz o app oficial, é desistir cedo demais.
+                MediaPlayer.Event.EncounteredError -> {
+                    val url = urlAtual
+                    val posicao = _estado.value.posicaoMs
+                    if (url != null && tentativasDeRecuperacao < MAX_TENTATIVAS) {
+                        tentativasDeRecuperacao++
+                        _estado.update { it.copy(carregando = true, erro = null) }
+                        abrir(url, posicao)
+                    } else {
+                        _estado.update {
+                            it.copy(
+                                erro = "Não consegui retomar o filme nesta posição. " +
+                                    "Tente trocar para o motor ExoPlayer.",
+                                carregando = false,
+                            )
+                        }
                     }
+                }
             }
         }
     }
@@ -98,6 +118,7 @@ class MotorVlc(context: Context) : MotorVideo {
         }
 
     override fun abrir(url: String, posicaoInicialMs: Long) {
+        urlAtual = url
         val media = Media(libVlc, Uri.parse(url)).apply {
             setHWDecoderEnabled(true, false)
             addOption(":network-caching=3000")
@@ -142,6 +163,11 @@ class MotorVlc(context: Context) : MotorVideo {
                 duracaoMs = player.length.coerceAtLeast(0L),
             )
         }
+    }
+
+    private companion object {
+        /** Tentativas por incidente; o contador zera quando o vídeo volta a tocar. */
+        const val MAX_TENTATIVAS = 5
     }
 
     override fun liberar() {
