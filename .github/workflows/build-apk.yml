@@ -56,13 +56,35 @@ jobs:
       # compileSdk 37 é exigido pelo Compose atual — ver gradle/libs.versions.toml.
       - name: Instalar SDK necessário
         run: |
+          set -eux
           SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
-          echo "SDK em: $SDK"
-          SDKMANAGER=$(ls -d "$SDK"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | tail -1)
-          echo "sdkmanager: $SDKMANAGER"
+          SDKMANAGER=$(ls -d "$SDK"/cmdline-tools/*/bin/sdkmanager | tail -1)
           yes 2>/dev/null | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
-          "$SDKMANAGER" "platforms;android-37" "build-tools;36.0.0"
+          "$SDKMANAGER" "build-tools;36.0.0"
+
+          # A platform 37 NÃO está no catálogo deste sdkmanager: ele entende o
+          # SDK XML só até a versão 3 e o pacote está na versão 4, então responde
+          # "Failed to find package". Instalamos direto do repositório oficial.
+          # Mesmo problema aconteceu na máquina local — ver docs/DIARIO.md.
+          if [ ! -d "$SDK/platforms/android-37" ]; then
+            curl -sL --retry 3 -o /tmp/p37.zip \
+              https://dl.google.com/android/repository/platform-37.0_r02.zip
+            mkdir -p /tmp/p37 && unzip -q /tmp/p37.zip -d /tmp/p37
+            mv "$(ls -d /tmp/p37/*/ | head -1)" "$SDK/platforms/android-37"
+            # O zip vem SEM source.properties, e sem ele o AGP ignora a pasta.
+            printf '%s\n' \
+              'Pkg.Desc=Android SDK Platform 37' \
+              'Pkg.UserSrc=false' \
+              'Platform.Version=17' \
+              'Pkg.Revision=2' \
+              'AndroidVersion.ApiLevel=37' \
+              'Layoutlib.Api=15' \
+              'Layoutlib.Revision=1' \
+              'Platform.MinToolsRev=22' \
+              > "$SDK/platforms/android-37/source.properties"
+          fi
           ls "$SDK/platforms"
+          test -f "$SDK/platforms/android-37/android.jar"
 
       - uses: gradle/actions/setup-gradle@v4
 
