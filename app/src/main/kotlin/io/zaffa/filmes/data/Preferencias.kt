@@ -14,9 +14,16 @@ private val Context.armazenamento by preferencesDataStore(name = "preferencias")
 /**
  * Preferências do app.
  *
- * Não guarda credenciais: quem cuida do login é a página do painel, dentro do
- * WebView, e a sessão fica nos cookies do próprio WebView. Isso é melhor do que
- * o app guardar senha — não há o que vazar daqui.
+ * SOBRE AS CREDENCIAIS: quando o usuário marca "lembrar meus dados", usuário e
+ * senha ficam aqui, no **armazenamento privado do app**. Nenhum outro aplicativo
+ * consegue ler, e nada sai do aparelho — o app não tem servidor próprio.
+ *
+ * Isso é escolha do usuário, e ele pode desfazer: desmarcar a opção ou sair da
+ * conta apaga o que estava guardado. Sem isso, toda vez que a sessão do painel
+ * expirasse ele teria de digitar a senha de novo.
+ *
+ * ⚠️ Estas credenciais **nunca** podem ser escritas em log, arquivo do projeto ou
+ * mensagem de erro. Ver docs/PROTOCOLO.md §2.
  */
 class Preferencias(private val context: Context) {
 
@@ -38,16 +45,43 @@ class Preferencias(private val context: Context) {
         context.armazenamento.edit { p -> p[MOTOR] = motor.name }
     }
 
-    /**
-     * Se há sessão do painel ativa. Guarda apenas um sim/não — a sessão de
-     * verdade vive nos cookies, e a senha não é guardada em lugar nenhum.
-     */
+    /** Se há sessão do painel ativa (a sessão de verdade vive nos cookies). */
     val sessaoAtiva: Flow<Boolean> = context.armazenamento.data.map { p ->
         p[SESSAO] == "1"
     }
 
     suspend fun marcarSessaoAtiva(ativa: Boolean) {
         context.armazenamento.edit { p -> p[SESSAO] = if (ativa) "1" else "0" }
+    }
+
+    /**
+     * Credenciais guardadas, ou `null` se o usuário não pediu para lembrar.
+     *
+     * É o que permite o app **entrar sozinho** quando a sessão do painel expira,
+     * em vez de jogar o usuário numa tela de login do nada.
+     */
+    val credenciaisSalvas: Flow<Credenciais?> = context.armazenamento.data.map { p ->
+        val usuario = p[USUARIO]
+        val senha = p[SENHA]
+        if (usuario.isNullOrBlank() || senha.isNullOrBlank()) {
+            null
+        } else {
+            Credenciais(usuario, senha)
+        }
+    }
+
+    suspend fun lembrarCredenciais(usuario: String, senha: String) {
+        context.armazenamento.edit { p ->
+            p[USUARIO] = usuario
+            p[SENHA] = senha
+        }
+    }
+
+    suspend fun esquecerCredenciais() {
+        context.armazenamento.edit { p ->
+            p.remove(USUARIO)
+            p.remove(SENHA)
+        }
     }
 
     suspend fun salvarUrlPainel(url: String) {
@@ -58,5 +92,17 @@ class Preferencias(private val context: Context) {
         val MOTOR = stringPreferencesKey("motor")
         val URL_PAINEL = stringPreferencesKey("url_painel")
         val SESSAO = stringPreferencesKey("sessao_ativa")
+        val USUARIO = stringPreferencesKey("usuario")
+        val SENHA = stringPreferencesKey("senha")
     }
+}
+
+/**
+ * Credenciais do painel, em memória.
+ *
+ * `toString` é sobrescrito para a senha nunca aparecer por acidente num log ou
+ * numa mensagem de erro.
+ */
+data class Credenciais(val usuario: String, val senha: String) {
+    override fun toString(): String = "Credenciais(usuario=***, senha=***)"
 }

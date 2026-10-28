@@ -33,6 +33,8 @@ sealed interface Tela {
 data class EstadoLogin(
     val usuario: String = "",
     val senha: String = "",
+    /** "Lembrar meus dados" — guarda as credenciais no aparelho. */
+    val lembrar: Boolean = true,
     val ocupado: Boolean = false,
     val erro: String? = null,
 )
@@ -59,13 +61,32 @@ class ModeloPrincipal(aplicacao: Application) : AndroidViewModel(aplicacao) {
     init {
         viewModelScope.launch {
             _motor.value = app.preferencias.motor.first()
-            _tela.value = if (app.preferencias.sessaoAtiva.first()) Tela.Inicio else Tela.Login
+            val salvas = app.preferencias.credenciaisSalvas.first()
+
+            when {
+                // Sessão ainda válida: entra direto.
+                app.preferencias.sessaoAtiva.first() -> _tela.value = Tela.Inicio
+
+                // Sem sessão, mas com dados guardados: entra sozinho. É isto que
+                // evita o usuário cair numa tela de login do nada, só porque a
+                // sessão do painel expirou.
+                salvas != null -> {
+                    _login.update {
+                        it.copy(usuario = salvas.usuario, senha = salvas.senha, ocupado = true)
+                    }
+                    entrar()
+                }
+
+                else -> _tela.value = Tela.Login
+            }
         }
     }
 
     fun aoDigitarUsuario(v: String) = _login.update { it.copy(usuario = v, erro = null) }
 
     fun aoDigitarSenha(v: String) = _login.update { it.copy(senha = v, erro = null) }
+
+    fun aoAlternarLembrar() = _login.update { it.copy(lembrar = !it.lembrar) }
 
     fun entrar() {
         val estado = _login.value
@@ -81,17 +102,29 @@ class ModeloPrincipal(aplicacao: Application) : AndroidViewModel(aplicacao) {
             when (app.clientePainel.entrar(base, estado.usuario, estado.senha)) {
                 is ClientePainel.Resultado.Ok -> {
                     app.preferencias.marcarSessaoAtiva(true)
+                    if (estado.lembrar) {
+                        app.preferencias.lembrarCredenciais(estado.usuario, estado.senha)
+                    } else {
+                        app.preferencias.esquecerCredenciais()
+                    }
                     // A senha sai da memória assim que deixa de ser necessária.
                     _login.value = EstadoLogin()
                     _tela.value = Tela.Inicio
                 }
 
-                is ClientePainel.Resultado.CredenciaisInvalidas ->
+                is ClientePainel.Resultado.CredenciaisInvalidas -> {
+                    // Senha guardada não serve mais (trocaram no painel): apaga,
+                    // senão o app tentaria entrar sozinho e falhar para sempre.
+                    app.preferencias.esquecerCredenciais()
                     _login.update {
-                        it.copy(ocupado = false, erro = "Usuário ou senha incorretos.")
+                        it.copy(ocupado = false, senha = "", erro = "Usuário ou senha incorretos.")
                     }
+                    _tela.value = Tela.Login
+                }
 
-                is ClientePainel.Resultado.Falhou ->
+                is ClientePainel.Resultado.Falhou -> {
+                    // Falha de rede não apaga os dados guardados: a senha pode
+                    // estar certa e só a internet ter caído.
                     _login.update {
                         it.copy(
                             ocupado = false,
@@ -99,6 +132,8 @@ class ModeloPrincipal(aplicacao: Application) : AndroidViewModel(aplicacao) {
                                 "Verifique a sua internet e tente de novo.",
                         )
                     }
+                    _tela.value = Tela.Login
+                }
             }
         }
     }
@@ -107,6 +142,9 @@ class ModeloPrincipal(aplicacao: Application) : AndroidViewModel(aplicacao) {
         viewModelScope.launch {
             app.clientePainel.sair()
             app.preferencias.marcarSessaoAtiva(false)
+            // Sair tem de apagar os dados guardados, senão o app entraria sozinho
+            // de novo na abertura seguinte e "sair" não teria significado algum.
+            app.preferencias.esquecerCredenciais()
             _login.value = EstadoLogin()
             _tela.value = Tela.Login
         }

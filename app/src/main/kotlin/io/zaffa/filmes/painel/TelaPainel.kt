@@ -313,7 +313,7 @@ private fun BarraDoPainel(
         }
 
         androidx.compose.material3.Text(
-            text = "Filmes",
+            text = "Filmes Full",
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = Cores.VioletaClaro,

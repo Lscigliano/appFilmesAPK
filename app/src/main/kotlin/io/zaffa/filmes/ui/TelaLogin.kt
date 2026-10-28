@@ -2,7 +2,9 @@ package io.zaffa.filmes.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,6 +22,8 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -96,7 +100,7 @@ fun TelaLogin(modelo: ModeloPrincipal) {
 
             Spacer(Modifier.height(20.dp))
             Text(
-                text = "Filmes",
+                text = "Filmes Full",
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.ExtraBold,
                 color = Cores.Texto,
@@ -157,6 +161,39 @@ fun TelaLogin(modelo: ModeloPrincipal) {
                 ),
                 modifier = Modifier.fillMaxWidth(),
             )
+
+            Spacer(Modifier.height(6.dp))
+
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable(enabled = !estado.ocupado) { modelo.aoAlternarLembrar() }
+                    .padding(vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(
+                    checked = estado.lembrar,
+                    onCheckedChange = { modelo.aoAlternarLembrar() },
+                    enabled = !estado.ocupado,
+                    colors = CheckboxDefaults.colors(
+                        checkedColor = Cores.Violeta,
+                        uncheckedColor = Cores.TextoFraco,
+                    ),
+                )
+                Column {
+                    Text(
+                        text = "Lembrar meus dados",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Cores.Texto,
+                    )
+                    Text(
+                        text = "Entra sozinho da próxima vez",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Cores.TextoFraco,
+                    )
+                }
+            }
 
             if (estado.erro != null) {
                 Spacer(Modifier.height(16.dp))
