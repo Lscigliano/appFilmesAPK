@@ -50,11 +50,19 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - uses: android-actions/setup-android@v3
-
+      # Não usamos android-actions/setup-android: a v3 tenta instalar o pacote
+      # obsoleto `tools`, que o Google removeu, e falha. O runner do GitHub já
+      # traz o SDK — basta acrescentar o que falta.
       # compileSdk 37 é exigido pelo Compose atual — ver gradle/libs.versions.toml.
       - name: Instalar SDK necessário
-        run: sdkmanager "platforms;android-37" "build-tools;36.0.0"
+        run: |
+          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          echo "SDK em: $SDK"
+          SDKMANAGER=$(ls -d "$SDK"/cmdline-tools/*/bin/sdkmanager 2>/dev/null | tail -1)
+          echo "sdkmanager: $SDKMANAGER"
+          yes 2>/dev/null | "$SDKMANAGER" --licenses >/dev/null 2>&1 || true
+          "$SDKMANAGER" "platforms;android-37" "build-tools;36.0.0"
+          ls "$SDK/platforms"
 
       - uses: gradle/actions/setup-gradle@v4
 
