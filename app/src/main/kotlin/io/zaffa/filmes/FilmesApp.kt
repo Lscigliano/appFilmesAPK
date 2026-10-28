@@ -2,6 +2,7 @@ package io.zaffa.filmes
 
 import android.app.Application
 import io.zaffa.filmes.data.Preferencias
+import io.zaffa.filmes.painel.ClientePainel
 
 /**
  * Container de dependências, feito à mão.
@@ -17,6 +18,9 @@ class FilmesApp : Application() {
 
     lateinit var preferencias: Preferencias
         private set
+
+    /** Faz o login do painel a partir do nosso formulário. */
+    val clientePainel: ClientePainel by lazy { ClientePainel() }
 
     override fun onCreate() {
         super.onCreate()

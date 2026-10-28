@@ -8,6 +8,142 @@
 
 ---
 
+## [2026-10-28] Tela preta sem saída — um palpite meu prendeu o usuário
+**Quem:** Claude Opus 5, reportado pelo dono
+
+**Situação:** A tela inicial nativa abre o painel direto numa seção
+(`index.php?page=<nome>`). Os nomes foram **deduzidos** a partir de
+`page=moviedetail`, única amostra que tínhamos, e isso ficou documentado em
+`Secoes.kt` como "precisa de confirmação".
+
+**Resultado no primeiro uso real:** só o cartão de **TV** funcionou
+(`page=livetv` acertou). Os outros quatro levaram a uma **tela preta sem saída** —
+o dono relatou "não consigo mais acessar o celular".
+
+**O erro, e ele é de julgamento, não de código:** eu sabia que os caminhos eram
+palpite, escrevi isso no comentário, e **mesmo assim deixei a falha do palpite
+levar a um beco sem saída**. Documentar um risco não é tratá-lo.
+
+**Correção:** `onReceivedError` e `onReceivedHttpError` no quadro principal agora
+desviam para a raiz do painel e **avisam na tela** que a seção não existe. O app
+deixa de depender de os palpites estarem certos.
+
+**Aprendizado:**
+1. **Palpite nunca pode levar a estado sem saída.** Se um valor é incerto, o
+   caminho de falha dele precisa ser tratado no mesmo commit em que ele entra —
+   não "documentado para depois".
+2. **Fundo escuro esconde falha.** Numa UI escura, "não carregou" e "carregou
+   vazio" têm a mesma aparência. Toda tela que pode ficar vazia precisa de um
+   estado visível dizendo o que houve.
+3. O relato do usuário foi "não consigo acessar o celular" — do ponto de vista
+   dele, o app **era** o celular naquele momento. Vale lembrar o tamanho do
+   estrago que uma tela sem botão de saída causa.
+4. Pendente: os quatro caminhos corretos de seção. Enquanto não chegarem, o app
+   funciona pela raiz do painel, sem travar.
+
+---
+
+
+## [2026-10-28] 🎯 CAUSA RAIZ ENCONTRADA: o servidor só entrega a partir do byte 0
+**Quem:** Claude Opus 5, com URLs capturadas pelo dono
+
+**Situação:** Depois de todas as hipóteses caírem, faltava explicar por que o filme
+trava ao avançar. Minhas medições anteriores diziam que o servidor suportava
+`Range` — **e estavam erradas**: eu conferia o código HTTP e o cabeçalho
+`Content-Range`, mas **nunca medi se os bytes chegavam**.
+
+**Ação:** Mapa de posições medindo **bytes efetivamente recebidos**, com token
+novo, pedindo 2 MB em cada posição.
+
+**Resultado:**
+
+| Posição | HTTP | Bytes recebidos | |
+|---|---|---|---|
+| 0% | 206 | **2.000.001** | ✅ completo |
+| 1% | 206 | 6.717 | ⚠️ cortado |
+| 10% | 206 | 5.803 | ⚠️ cortado |
+| 50% | 206 | 6.504 | ⚠️ cortado |
+| 90% | 206 | 5.745 | ⚠️ cortado |
+
+Testes complementares, todos negativos:
+- **Insistir:** 10 tentativas na mesma posição → **0 completas**, sempre exatamente
+  6.504 bytes. Determinístico, não é falha de rede.
+- **Aquecer:** ler 20 MB sequenciais e depois pedir um trecho **dentro** do que já
+  foi lido → ainda 6.504 bytes.
+- **Token virgem:** primeira requisição de um token novo, direto no meio do
+  arquivo → 6.940 bytes. Não é "uma entrega por token".
+- **Conteúdo:** os bytes são vídeo binário, não página de erro. O servidor envia
+  `Content-Length: 1000001`, entrega ~6 KB e **desliga a conexão**.
+
+**CONCLUSÃO:** o servidor **só serve requisições que começam no byte 0**. Avançar
+o filme é **impossível neste servidor**, por desenho ou defeito dele. Não é bug do
+player, e **nenhuma quantidade de tentativas resolve** — o que invalida a premissa
+da recuperação automática para este caso específico (ela ainda ajuda em quedas de
+rede comuns).
+
+**Aprendizado — o mais caro do projeto:**
+1. **Medir o código HTTP não é medir a entrega.** Um `206 Partial Content` com
+   `Content-Range` correto pode entregar 6 KB de 1 MB prometido. Passei o dia
+   inteiro com uma medição errada porque usei `-o /dev/null` sem olhar
+   `size_download`. **Sempre meça bytes recebidos, não só status.**
+2. É exatamente por isso que o player congela **sem erro**: do ponto de vista dele,
+   a resposta foi um sucesso. Ele recebe o cabeçalho, lê 6 KB e fica esperando o
+   resto para sempre.
+3. O player do painel entra em **laço infinito** de tentativas — o dono observou
+   requisições falhando continuamente **mesmo com o vídeo pausado**. Nosso app
+   precisa de guarda contra isso (implementada: o orçamento de tentativas só é
+   devolvido após 10 s de reprodução estável).
+4. **O conserto client-side possível é outro:** cache em disco do que foi baixado
+   sequencialmente, para permitir voltar atrás e avançar dentro do já baixado, e
+   **dizer a verdade na tela** quando o usuário tentar ir além. Ver TASK.md.
+
+---
+
+
+## [2026-10-28] Limite de conexões NÃO é a causa do travamento — hipótese testada e derrubada
+**Quem:** Claude Opus 5
+
+**Situação:** O painel mostra, no perfil do cliente, `MÁXIMO DE CONEXÕES: 1`.
+Isso sugeria uma explicação elegante para o travamento: ao avançar, o player abre
+uma segunda conexão antes de fechar a primeira; com limite 1, o servidor recusaria
+e o vídeo congelaria. Encaixava com tudo — inclusive com "trava no celular do dono
+e não no da esposa", já que motores de vídeo diferem nesse comportamento.
+
+**Ação:** Teste desenhado para reproduzir exatamente isso: uma conexão longa
+mantida aberta (20 MB a 400 KB/s, **48 segundos**) e, durante ela, três outras
+requisições `Range` em posições distantes do arquivo.
+
+**Resultado:** **Todas as quatro responderam `HTTP 206`.** Nenhuma recusa.
+
+| Conexão | Resultado |
+|---|---|
+| A — longa, 48 s, 20 MB | 206 |
+| B1 — durante A | 206 |
+| B2 — durante A | 206 |
+| B3 — durante A | 206 |
+
+**Conclusão:** o **servidor de vídeo não impõe limite de conexões**. O
+`MÁXIMO DE CONEXÕES: 1` é contabilizado pelo **portal**, para sessões do painel,
+não pelo CDN que entrega o MP4. Portanto **não explica o travamento ao avançar**.
+
+**Aprendizado:**
+1. **A causa raiz continua desconhecida.** Todas as hipóteses testadas caíram:
+   servidor sem suporte a `Range`, token expirando, limite de conexões. A única
+   que sobrevive é o User-Agent do VLC devolvendo 500 — mas ela não explicaria o
+   travamento de quem usa ExoPlayer.
+2. **O limite de 1 conexão é real e importa**, só que para outra pergunta: o dono
+   perguntou se três pessoas podem assistir ao mesmo tempo. A resposta é **não** —
+   mas por limite do plano no portal, não por isto travar o avanço.
+3. Registrado em `tasks/lessons.md`: esta foi a **segunda** vez no mesmo dia em que
+   anunciei uma causa antes de medir. A regra agora é explícita — hipótese se
+   rotula como hipótese até o teste existir.
+4. Consequência prática: **o conserto continua sendo o certo**. Como a causa não
+   se deixa capturar, tornar o player resistente à falha (recuperação automática)
+   é a resposta adequada — e já se provou no aparelho do dono.
+
+---
+
+
 ## [2026-10-28] ✅ N4 ATINGIDO — o filme avança sem travar, nas duas redes
 **Quem:** Claude Opus 5, testado pelo dono no aparelho real
 

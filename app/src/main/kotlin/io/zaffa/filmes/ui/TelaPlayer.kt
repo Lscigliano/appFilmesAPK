@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Forward30
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -232,7 +232,7 @@ private fun Controles(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = aoVoltar) {
-                Icon(Icons.Filled.ArrowBack, contentDescription = "Voltar", tint = Cores.Texto)
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar", tint = Cores.Texto)
             }
             Text(
                 text = titulo,

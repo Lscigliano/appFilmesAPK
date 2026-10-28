@@ -18,6 +18,8 @@ import io.zaffa.filmes.painel.TelaPainel
 import io.zaffa.filmes.ui.Cores
 import io.zaffa.filmes.ui.ModeloPrincipal
 import io.zaffa.filmes.ui.Tela
+import io.zaffa.filmes.ui.TelaInicio
+import io.zaffa.filmes.ui.TelaLogin
 import io.zaffa.filmes.ui.TelaPlayer
 import io.zaffa.filmes.ui.TemaFilmes
 
@@ -42,10 +44,20 @@ class MainActivity : ComponentActivity() {
                                 CircularProgressIndicator(color = Cores.Violeta)
                             }
 
+                        is Tela.Login -> TelaLogin(modelo)
+
+                        is Tela.Inicio -> TelaInicio(
+                            aoEscolher = modelo::abrirSecao,
+                            aoAbrirPainel = modelo::abrirPainel,
+                            aoSair = modelo::sair,
+                        )
+
                         is Tela.Painel -> TelaPainel(
                             urlInicial = t.url,
+                            urlRaiz = t.raiz,
                             aoCapturarVideo = modelo::aoCapturarVideo,
-                            aoSair = { finish() },
+                            aoNavegar = modelo::aoNavegarNoPainel,
+                            aoSair = modelo::voltarAoInicio,
                         )
 
                         is Tela.Player -> TelaPlayer(

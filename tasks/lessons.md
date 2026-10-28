@@ -94,3 +94,47 @@ texto que **a própria documentação do repositório contém**.
 aplicada (`id("...")`, `alias(...)`, atribuição no `.toml`) e exclua linhas de
 comentário. Depois de escrever qualquer checagem, **rode-a localmente** antes de
 commitar — as duas falhas teriam sido pegas em 5 segundos.
+
+---
+
+## 2026-10-28 — Esperar a medição antes de anunciar a causa (2ª ocorrência no mesmo dia)
+
+**O padrão:** encontrar um indício forte, anunciá-lo ao usuário como explicação, e
+só então medir — descobrindo que estava errado.
+
+Aconteceu duas vezes:
+1. Campo `recaptcha_response` no HTML → anunciei "o login tem reCAPTCHA" e usei
+   isso para justificar arquitetura. Não havia script nem sitekey: estava desligado.
+2. Painel mostrando `MÁXIMO DE CONEXÕES: 1` → anunciei que era "provavelmente a
+   causa raiz" do travamento ao avançar. Teste seguinte: conexão longa de 48 s
+   segurada, mais três simultâneas — **todas 206**. O servidor de vídeo não impõe
+   limite algum. O limite é do portal, não do CDN.
+
+**Por que importa:** o dono toma decisões com base no que eu afirmo. Uma causa
+anunciada errada faz ele parar de procurar a verdadeira — e no caso 1, quase
+mudou a arquitetura do app.
+
+**Regra:** indício forte não vira afirmação. Diga "tenho uma hipótese, vou medir",
+meça, e **só então** afirme. Se a medição for demorada, apresente como hipótese
+explicitamente rotulada, com o teste que a confirmaria.
+
+**Regra 2:** uma hipótese que explica *tudo* elegantemente é justamente a que mais
+precisa de teste. As duas pareciam encaixar perfeitamente. Nenhuma sobreviveu.
+
+---
+
+## 2026-10-28 — Palpite documentado ainda é palpite: trate o caminho de falha
+
+**O erro:** deduzir os endereços das seções do painel, escrever no código que
+precisavam de confirmação, e mesmo assim deixar o app ir para uma **tela preta
+sem saída** quando a dedução falhasse. Quatro dos cinco palpites estavam errados.
+
+**Impacto real:** o dono relatou "a tela ficou preta, não consigo mais acessar o
+celular". Para ele, naquele momento, o app era o celular.
+
+**Regra:** valor incerto exige tratamento do caminho de falha **no mesmo commit**.
+Comentário avisando não é tratamento. Pergunte: "se este palpite estiver errado,
+o usuário consegue sair?" Se a resposta for não, não entregue.
+
+**Regra 2:** em UI escura, "falhou" e "vazio" são visualmente idênticos. Toda tela
+que pode ficar sem conteúdo precisa de estado explícito na tela.

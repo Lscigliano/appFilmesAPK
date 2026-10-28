@@ -1,6 +1,7 @@
 package io.zaffa.filmes.player
 
 import android.content.Context
+import android.os.SystemClock
 import android.view.View
 import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
@@ -43,8 +44,11 @@ class MotorExo(context: Context) : MotorVideo {
     private val _estado = MutableStateFlow(EstadoPlayer())
     override val estado: StateFlow<EstadoPlayer> = _estado
 
-    /** Quantas vezes já tentamos retomar desde a última reprodução bem-sucedida. */
+    /** Quantas vezes já tentamos retomar desde a última reprodução estável. */
     private var tentativasDeRecuperacao = 0
+
+    /** Quando a reprodução começou, para distinguir retomada real de engasgo. */
+    private var inicioDaReproducaoMs = 0L
 
     private val player: ExoPlayer = run {
         val httpFactory = DefaultHttpDataSource.Factory()
@@ -84,11 +88,7 @@ class MotorExo(context: Context) : MotorVideo {
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
-            // Voltou a tocar: a recuperação deu certo, então o orçamento de
-            // tentativas é devolvido. Sem isto, três engasgos ao longo de um
-            // filme de duas horas esgotariam as tentativas e o quarto viraria
-            // travamento permanente.
-            if (isPlaying) tentativasDeRecuperacao = 0
+            if (isPlaying) inicioDaReproducaoMs = SystemClock.elapsedRealtime()
             _estado.update { it.copy(tocando = isPlaying) }
         }
 
@@ -107,6 +107,16 @@ class MotorExo(context: Context) : MotorVideo {
          */
         override fun onPlayerError(error: PlaybackException) {
             val posicao = player.currentPosition.coerceAtLeast(0L)
+
+            // Só devolve o orçamento de tentativas se o vídeo tocou de forma
+            // ESTÁVEL antes de falhar. Zerar o contador a cada retomada curta
+            // criaria um laço infinito: tocar meio segundo, falhar, zerar,
+            // tentar de novo, para sempre. É exatamente o defeito observado no
+            // player do painel, que segue pedindo e falhando até com o vídeo
+            // pausado (relato do dono, 2026-10-28).
+            val tocouDeVerdade = inicioDaReproducaoMs > 0L &&
+                SystemClock.elapsedRealtime() - inicioDaReproducaoMs > REPRODUCAO_ESTAVEL_MS
+            if (tocouDeVerdade) tentativasDeRecuperacao = 0
 
             if (tentativasDeRecuperacao < MAX_TENTATIVAS) {
                 tentativasDeRecuperacao++
@@ -191,5 +201,12 @@ class MotorExo(context: Context) : MotorVideo {
          * o limite vale por incidente, não pelo filme inteiro.
          */
         const val MAX_TENTATIVAS = 5
+
+        /**
+         * Quanto tempo o vídeo precisa tocar sem falhar para o orçamento de
+         * tentativas ser devolvido. Abaixo disto, considera-se que ele não
+         * chegou a se recuperar de verdade.
+         */
+        const val REPRODUCAO_ESTAVEL_MS = 10_000L
     }
 }

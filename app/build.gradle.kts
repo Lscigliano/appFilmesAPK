@@ -102,6 +102,10 @@ dependencies {
     implementation(libs.media3.exoplayer.hls)
     implementation(libs.media3.ui)
 
+    // Login nativo e leitura do HTML do painel
+    implementation(libs.okhttp)
+    implementation(libs.jsoup)
+
     // Motor de vídeo 2 — libVLC (tolera servidores que ignoram Range)
     implementation(libs.libvlc)
 

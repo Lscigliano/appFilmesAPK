@@ -21,7 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
@@ -63,11 +63,21 @@ import java.io.ByteArrayInputStream
 @Composable
 fun TelaPainel(
     urlInicial: String,
+    urlRaiz: String,
     aoCapturarVideo: (url: String) -> Unit,
+    aoNavegar: (url: String) -> Unit,
     aoSair: () -> Unit,
 ) {
     var progresso by remember { mutableStateOf(0) }
     var webView by remember { mutableStateOf<WebView?>(null) }
+
+    // Precisa ser estado, não leitura direta de `canGoBack()`: o Compose não
+    // recompõe quando o histórico do WebView muda, e a seta ficaria apagada
+    // mesmo havendo para onde voltar.
+    var podeVoltar by remember { mutableStateOf(false) }
+
+    // Avisa quando a seção pedida não existia e o app caiu na raiz do painel.
+    var caiuNaRaiz by remember { mutableStateOf(false) }
 
     // Evita abrir o mesmo vídeo duas vezes: o WebView pede o arquivo mais de uma
     // vez (uma delas só para ler metadados), e sem isto o player reabriria.
@@ -85,9 +95,12 @@ fun TelaPainel(
             .statusBarsPadding(),
     ) {
         BarraDoPainel(
-            podeVoltar = webView?.canGoBack() == true,
+            podeVoltar = podeVoltar,
             aoVoltar = { webView?.let { if (it.canGoBack()) it.goBack() else aoSair() } },
-            aoInicio = { webView?.loadUrl(urlInicial) },
+            // Início leva à RAIZ do painel, não à página em que se entrou: esta
+            // tela costuma abrir num link direto de seção, e recarregá-lo não
+            // ajudaria ninguém — menos ainda se o caminho da seção estiver errado.
+            aoInicio = { webView?.loadUrl(urlRaiz) },
             aoRecarregar = { webView?.reload() },
         )
 
@@ -97,6 +110,19 @@ fun TelaPainel(
                 modifier = Modifier.fillMaxWidth().height(2.dp),
                 color = Cores.Violeta,
                 trackColor = Cores.Superficie,
+            )
+        }
+
+        if (caiuNaRaiz) {
+            androidx.compose.material3.Text(
+                text = "Essa seção não existe neste painel — abri a página inicial. " +
+                    "Use o menu do site para chegar onde você quer.",
+                style = MaterialTheme.typography.bodySmall,
+                color = Cores.Texto,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Cores.Violeta.copy(alpha = 0.22f))
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
             )
         }
 
@@ -117,7 +143,6 @@ fun TelaPainel(
                         settings.apply {
                             javaScriptEnabled = true
                             domStorageEnabled = true
-                            databaseEnabled = true
                             // O painel declara `width=device-width`, então ele TEM
                             // layout de celular. Estas duas fazem o WebView
                             // respeitar isso em vez de renderizar como desktop.
@@ -179,6 +204,55 @@ fun TelaPainel(
                                 progresso = 100
                                 view.evaluateJavascript(JS_OBSERVADOR, null)
                             }
+
+                            /**
+                             * Se a página não existe, cai na raiz do painel.
+                             *
+                             * Os caminhos das seções em `Secoes.kt` são deduzidos e
+                             * podem estar errados — e estavam: só o da TV acertou.
+                             * Sem isto o usuário via **tela preta sem saída**, que
+                             * foi exatamente o que aconteceu no primeiro teste real.
+                             * Nenhum palpite nosso pode deixar o app sem saída.
+                             */
+                            override fun onReceivedHttpError(
+                                view: WebView,
+                                request: WebResourceRequest,
+                                errorResponse: WebResourceResponse,
+                            ) {
+                                if (!request.isForMainFrame) return
+                                if (view.url == urlRaiz) return
+                                caiuNaRaiz = true
+                                view.loadUrl(urlRaiz)
+                            }
+
+                            override fun onReceivedError(
+                                view: WebView,
+                                request: WebResourceRequest,
+                                error: android.webkit.WebResourceError,
+                            ) {
+                                if (!request.isForMainFrame) return
+                                if (view.url == urlRaiz) return
+                                caiuNaRaiz = true
+                                view.loadUrl(urlRaiz)
+                            }
+
+                            /**
+                             * Acompanha a navegação dentro do painel.
+                             *
+                             * Serve a duas coisas: manter a seta "voltar" com o
+                             * estado certo, e guardar a página atual para que
+                             * sair do player devolva o usuário **onde ele estava**,
+                             * e não ao começo da seção. O WebView é destruído ao
+                             * trocar de tela, então sem isto a posição se perde.
+                             */
+                            override fun doUpdateVisitedHistory(
+                                view: WebView,
+                                url: String,
+                                isReload: Boolean,
+                            ) {
+                                podeVoltar = view.canGoBack()
+                                if (!CapturaDeVideo.ehVideoDoPainel(url)) aoNavegar(url)
+                            }
                         }
 
                         webChromeClient = object : WebChromeClient() {
@@ -229,7 +303,7 @@ private fun BarraDoPainel(
     ) {
         IconButton(onClick = aoVoltar, modifier = Modifier.size(44.dp)) {
             Icon(
-                Icons.Filled.ArrowBack,
+                Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Voltar",
                 tint = if (podeVoltar) Cores.Texto else Cores.TextoFraco,
             )
