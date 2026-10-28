@@ -23,15 +23,44 @@ object CapturaDeVideo {
         RegexOption.IGNORE_CASE,
     )
 
+    /**
+     * Transmissão ao vivo: TV e rádio.
+     *
+     * São HLS (`.m3u8`), não arquivo fechado como os filmes — por isso o padrão
+     * é outro. O ExoPlayer já traz suporte a HLS no projeto.
+     *
+     * Casa **apenas o manifesto** (`.m3u8`), nunca os segmentos (`.ts`): os
+     * segmentos chegam às centenas durante a reprodução, e capturar cada um
+     * reabriria o player sem parar.
+     */
+    private val AO_VIVO = Regex(
+        """https?://[^\s"']+\.m3u8(\?[^\s"']*)?""",
+        RegexOption.IGNORE_CASE,
+    )
+
     /** Mídia servida pelo YouTube — o painel usa para trailers. */
     private val YOUTUBE = Regex(
         """(youtube\.com|youtu\.be|googlevideo\.com|ytimg\.com)""",
         RegexOption.IGNORE_CASE,
     )
 
-    fun ehVideoDoPainel(url: String): Boolean = VIDEO_COM_TOKEN.matches(url.trim())
+    /**
+     * Se esta URL é mídia do painel que o **nosso** player deve tocar.
+     *
+     * Cobre filme/série (arquivo com token) e TV/rádio ao vivo (manifesto HLS).
+     * Trailers do YouTube ficam de fora de propósito — ver [ehYoutube].
+     */
+    fun ehVideoDoPainel(url: String): Boolean {
+        val limpa = url.trim()
+        if (ehYoutube(limpa)) return false
+        return VIDEO_COM_TOKEN.matches(limpa) || AO_VIVO.matches(limpa)
+    }
 
-    fun encontrarNoTexto(texto: String): String? = VIDEO_COM_TOKEN.find(texto)?.value
+    /** Se a mídia é transmissão contínua, e não um arquivo com início e fim. */
+    fun ehAoVivo(url: String): Boolean = AO_VIVO.matches(url.trim())
+
+    fun encontrarNoTexto(texto: String): String? =
+        VIDEO_COM_TOKEN.find(texto)?.value ?: AO_VIVO.find(texto)?.value
 
     /**
      * Trailer do YouTube. O app **não** sequestra estes: deixa a página tocar.

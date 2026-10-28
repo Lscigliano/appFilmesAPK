@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -43,6 +44,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import android.app.Activity
 import android.content.pm.ActivityInfo
@@ -130,6 +132,9 @@ fun TelaPlayer(modelo: ModeloPrincipal, titulo: String, url: String) {
         }
     }
 
+    // TV e rádio são transmissão contínua: não há barra de progresso nem fim.
+    val aoVivo = remember(url) { io.zaffa.filmes.painel.CapturaDeVideo.ehAoVivo(url) }
+
     var controlesVisiveis by remember { mutableStateOf(true) }
     var arrastando by remember { mutableStateOf(false) }
     var valorArrasto by remember { mutableLongStateOf(0L) }
@@ -186,6 +191,7 @@ fun TelaPlayer(modelo: ModeloPrincipal, titulo: String, url: String) {
                 aoAlternar = { if (estado.tocando) motor.pausar() else motor.tocar() },
                 aoTrocarMotor = modelo::trocarMotor,
                 deitado = deitado,
+                aoVivo = aoVivo,
                 aoGirar = { deitado = !deitado },
                 aoRetroceder = { motor.buscar((estado.posicaoMs - 10_000).coerceAtLeast(0L)) },
                 aoAvancar = { motor.buscar(estado.posicaoMs + 30_000) },
@@ -248,6 +254,7 @@ private fun Controles(
     aoAlternar: () -> Unit,
     aoTrocarMotor: () -> Unit,
     deitado: Boolean,
+    aoVivo: Boolean,
     aoGirar: () -> Unit,
     aoRetroceder: () -> Unit,
     aoAvancar: () -> Unit,
@@ -327,7 +334,23 @@ private fun Controles(
                 .background(Color.Black.copy(alpha = 0.55f))
                 .padding(horizontal = 16.dp, vertical = 10.dp),
         ) {
-            if (duracaoMs > 0L) {
+            if (aoVivo) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        Modifier
+                            .size(9.dp)
+                            .clip(androidx.compose.foundation.shape.CircleShape)
+                            .background(Cores.Perigo),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        "AO VIVO",
+                        color = Cores.Texto,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            } else if (duracaoMs > 0L) {
                 Slider(
                     value = posicaoMs.toFloat().coerceIn(0f, duracaoMs.toFloat()),
                     onValueChange = { aoArrastar(it.toLong()) },
