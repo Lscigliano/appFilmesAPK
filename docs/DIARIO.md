@@ -8,6 +8,45 @@
 
 ---
 
+## [2026-10-28] ✅ N4 ATINGIDO — o filme avança sem travar, nas duas redes
+**Quem:** Claude Opus 5, testado pelo dono no aparelho real
+
+**Situação:** O projeto existe por um motivo só: o app oficial trava ao avançar o
+filme e não volta mais. Todos os níveis anteriores (N1 compila, N2 instala e abre,
+N3 toca) já tinham sido atingidos, mas **N4 — avançar o filme funciona** — seguia
+em aberto, e era o único que importava.
+
+**Ação:** Dono instalou o APK `build-d889fad` e testou filme e TV.
+
+**Resultado:** **Funcionou.** Filme e TV, no **5G** e no **WiFi corporativo**.
+O travamento ao avançar não ocorreu.
+
+**O que resolveu — e a honestidade sobre isso:**
+A correção entregue foi **recuperação automática** nos dois motores: ao falhar
+depois de um avanço, o player reabre o fluxo na mesma posição em vez de congelar
+(até 5 tentativas, contador zerando a cada retomada). Junto veio o User-Agent
+mascarado, obrigatório porque o servidor devolve HTTP 500 ao UA do VLC.
+
+**Não dá para afirmar qual das duas correções resolveu.** As duas foram ao APK
+juntas, e nunca consegui reproduzir o travamento a partir desta máquina — de cá o
+servidor sempre respondeu 206 em qualquer posição. Quem quiser isolar a causa
+precisa gerar uma versão com só uma das correções e testar no aparelho do dono.
+Registro isso explicitamente para ninguém escrever depois que "a causa era X".
+
+**Aprendizado:**
+1. **Consertar o efeito é uma resposta legítima quando a causa não se reproduz.**
+   Passei o dia tentando achar a causa raiz por medição remota e todas as
+   hipóteses caíram. O que entregou valor foi tornar o player resistente à falha,
+   qualquer que fosse ela.
+2. **O aparelho do usuário é o único ambiente que conta.** Nenhuma das medições
+   daqui — três redes, onze portas, 34 minutos de monitoramento — reproduziu o
+   problema que o dono via em segundos.
+3. Fechado este capítulo, o próximo pedido do dono é **interface própria** (app e
+   web), porque hoje ele vê a página web do painel dentro do app. Isso reabre a
+   necessidade de mapear a API do painel — ver `tasks/TASK.md`, Fase 6.
+
+---
+
 ## [2026-10-28] Token não expira: hipótese encerrada após 34 minutos de medição
 **Quem:** Claude Opus 5
 

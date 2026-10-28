@@ -34,7 +34,7 @@ que ficou pronto. Níveis de prova (N1..N4) definidos em `docs/PROTOCOLO.md`, §
       busca por posição**.
 - [ ] **N3 — login autentica e o catálogo lista filmes com capa**
 - [ ] **N3 — um filme abre e toca** nos dois motores
-- [ ] **N4 — AVANÇAR O FILME FUNCIONA.** O objetivo do projeto.
+- [x] **N4 — AVANÇAR O FILME FUNCIONA** ✅ 2026-10-28 — testado pelo dono em 5G e WiFi, filme e TV.
       *Prova obrigatória no diário, para cada motor:*
       | Motor | Avançar 30 s | Arrastar p/ metade | Voltar 10 s | Observação |
       |---|---|---|---|---|
