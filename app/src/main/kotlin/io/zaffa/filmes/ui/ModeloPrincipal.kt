@@ -5,7 +5,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import io.zaffa.filmes.FilmesApp
 import io.zaffa.filmes.painel.CapturaDeVideo
-import io.zaffa.filmes.painel.ClientePainel
 import io.zaffa.filmes.player.Motor
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -30,6 +29,13 @@ sealed interface Tela {
     data class Player(val url: String, val titulo: String) : Tela
 }
 
+/** Dados que o WebView invisível precisa para enviar o formulário. */
+data class PedidoLogin(
+    val urlLogin: String,
+    val usuario: String,
+    val senha: String,
+)
+
 data class EstadoLogin(
     val usuario: String = "",
     val senha: String = "",
@@ -48,6 +54,10 @@ class ModeloPrincipal(aplicacao: Application) : AndroidViewModel(aplicacao) {
 
     private val _login = MutableStateFlow(EstadoLogin())
     val login: StateFlow<EstadoLogin> = _login
+
+    /** Pedido de login em andamento, consumido pelo WebView invisível. */
+    private val _pedidoLogin = MutableStateFlow<PedidoLogin?>(null)
+    val pedidoLogin: StateFlow<PedidoLogin?> = _pedidoLogin
 
     private val _motor = MutableStateFlow(Motor.EXOPLAYER)
     val motor: StateFlow<Motor> = _motor
@@ -71,9 +81,10 @@ class ModeloPrincipal(aplicacao: Application) : AndroidViewModel(aplicacao) {
                 // evita o usuário cair numa tela de login do nada, só porque a
                 // sessão do painel expirou.
                 salvas != null -> {
-                    _login.update {
-                        it.copy(usuario = salvas.usuario, senha = salvas.senha, ocupado = true)
-                    }
+                    _login.update { it.copy(usuario = salvas.usuario, senha = salvas.senha) }
+                    // A tela de login precisa estar montada: é nela que vive o
+                    // WebView invisível que envia o formulário.
+                    _tela.value = Tela.Login
                     entrar()
                 }
 
@@ -117,6 +128,13 @@ class ModeloPrincipal(aplicacao: Application) : AndroidViewModel(aplicacao) {
         }
     }
 
+    /**
+     * Dispara o login.
+     *
+     * Quem envia o formulário é um WebView invisível ([LoginInvisivel]), não um
+     * cliente HTTP nosso: montar a requisição à mão não funcionou, e o navegador
+     * já sabe fazer isso certo. A tela continua sendo a nossa.
+     */
     fun entrar() {
         val estado = _login.value
         if (estado.usuario.isBlank() || estado.senha.isBlank()) {
@@ -126,44 +144,49 @@ class ModeloPrincipal(aplicacao: Application) : AndroidViewModel(aplicacao) {
 
         viewModelScope.launch {
             _login.update { it.copy(ocupado = true, erro = null) }
-            val base = app.preferencias.urlPainel.first()
+            val raiz = app.preferencias.urlPainel.first().trimEnd('/')
+            _pedidoLogin.value = PedidoLogin(
+                urlLogin = "$raiz/index.php?page=login",
+                usuario = estado.usuario,
+                senha = estado.senha,
+            )
+        }
+    }
 
-            when (app.clientePainel.entrar(base, estado.usuario, estado.senha)) {
-                is ClientePainel.Resultado.Ok -> {
-                    app.preferencias.marcarSessaoAtiva(true)
-                    if (estado.lembrar) {
-                        app.preferencias.lembrarCredenciais(estado.usuario, estado.senha)
-                    } else {
-                        app.preferencias.esquecerCredenciais()
-                    }
-                    // A senha sai da memória assim que deixa de ser necessária.
-                    _login.value = EstadoLogin()
-                    _tela.value = Tela.Inicio
-                }
-
-                is ClientePainel.Resultado.CredenciaisInvalidas -> {
-                    // Senha guardada não serve mais (trocaram no painel): apaga,
-                    // senão o app tentaria entrar sozinho e falhar para sempre.
-                    app.preferencias.esquecerCredenciais()
-                    _login.update {
-                        it.copy(ocupado = false, senha = "", erro = "Usuário ou senha incorretos.")
-                    }
-                    _tela.value = Tela.Login
-                }
-
-                is ClientePainel.Resultado.Falhou -> {
-                    // Falha de rede não apaga os dados guardados: a senha pode
-                    // estar certa e só a internet ter caído.
-                    _login.update {
-                        it.copy(
-                            ocupado = false,
-                            erro = "Não consegui falar com o servidor. " +
-                                "Verifique a sua internet e tente de novo.",
-                        )
-                    }
-                    _tela.value = Tela.Login
-                }
+    /** O painel aceitou: guarda o que foi pedido e entra. */
+    fun aoLoginConcluido() {
+        val estado = _login.value
+        _pedidoLogin.value = null
+        viewModelScope.launch {
+            app.preferencias.marcarSessaoAtiva(true)
+            if (estado.lembrar) {
+                app.preferencias.lembrarCredenciais(estado.usuario, estado.senha)
+            } else {
+                app.preferencias.esquecerCredenciais()
             }
+            // A senha sai da memória assim que deixa de ser necessária.
+            _login.value = EstadoLogin()
+            _tela.value = Tela.Inicio
+        }
+    }
+
+    /** O painel recusou, ou a rede falhou. */
+    fun aoLoginFalhou(mensagem: String) {
+        _pedidoLogin.value = null
+        val credencialRuim = mensagem.contains("incorret", ignoreCase = true)
+        viewModelScope.launch {
+            // Senha guardada que não serve mais é apagada, senão o app tentaria
+            // entrar sozinho e falhar para sempre. Falha de rede NÃO apaga: a
+            // senha pode estar certa e só a internet ter caído.
+            if (credencialRuim) app.preferencias.esquecerCredenciais()
+            _login.update {
+                it.copy(
+                    ocupado = false,
+                    senha = if (credencialRuim) "" else it.senha,
+                    erro = mensagem,
+                )
+            }
+            _tela.value = Tela.Login
         }
     }
 

@@ -50,6 +50,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.zaffa.filmes.painel.LoginInvisivel
 
 /**
  * Tela de login — nossa, não a do painel.
@@ -64,7 +65,21 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 @Composable
 fun TelaLogin(modelo: ModeloPrincipal) {
     val estado by modelo.login.collectAsStateWithLifecycle()
+    val pedido by modelo.pedidoLogin.collectAsStateWithLifecycle()
     var senhaVisivel by remember { mutableStateOf(false) }
+
+    // O WebView invisível que de fato envia o formulário do painel. Fica aqui
+    // porque precisa estar montado na árvore para executar — mas tem 1dp e o
+    // usuário nunca o vê. Ver painel/LoginInvisivel.kt.
+    pedido?.let { p ->
+        LoginInvisivel(
+            urlLogin = p.urlLogin,
+            usuario = p.usuario,
+            senha = p.senha,
+            aoSucesso = modelo::aoLoginConcluido,
+            aoFalhar = modelo::aoLoginFalhou,
+        )
+    }
 
     Box(
         Modifier
