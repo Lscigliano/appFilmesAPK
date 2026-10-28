@@ -88,6 +88,35 @@ class ModeloPrincipal(aplicacao: Application) : AndroidViewModel(aplicacao) {
 
     fun aoAlternarLembrar() = _login.update { it.copy(lembrar = !it.lembrar) }
 
+    /**
+     * Marca que estamos usando a página do painel para logar, e não o nosso
+     * formulário.
+     */
+    private var logandoPelaPagina = false
+
+    /**
+     * Abre a página de login do próprio painel.
+     *
+     * Existe como caminho garantido: o login nativo ([entrar]) monta a
+     * requisição a partir dos campos do formulário, e isso **pode não bastar** —
+     * o painel pode exigir algo que não enxergamos. Quando ele falha, o usuário
+     * não pode ficar sem acesso ao app.
+     *
+     * Aqui quem faz o login é a página do painel, exatamente como no navegador.
+     * Os cookies ficam no WebView, e o resto do app funciona igual.
+     */
+    fun entrarPelaPagina() {
+        viewModelScope.launch {
+            val base = app.preferencias.urlPainel.first()
+            val raiz = base.trimEnd('/')
+            val urlLogin = "$raiz/index.php?page=login"
+            logandoPelaPagina = true
+            raizDoPainel = raiz
+            ultimaPaginaDoPainel = urlLogin
+            _tela.value = Tela.Painel(urlLogin, raiz)
+        }
+    }
+
     fun entrar() {
         val estado = _login.value
         if (estado.usuario.isBlank() || estado.senha.isBlank()) {
@@ -194,6 +223,13 @@ class ModeloPrincipal(aplicacao: Application) : AndroidViewModel(aplicacao) {
      */
     fun aoNavegarNoPainel(url: String) {
         ultimaPaginaDoPainel = url
+
+        // Saiu da página de login => o painel aceitou as credenciais. É assim
+        // que detectamos sucesso quando o login é feito pela página dele.
+        if (logandoPelaPagina && !url.contains("page=login", ignoreCase = true)) {
+            logandoPelaPagina = false
+            viewModelScope.launch { app.preferencias.marcarSessaoAtiva(true) }
+        }
     }
 
     fun trocarMotor() {

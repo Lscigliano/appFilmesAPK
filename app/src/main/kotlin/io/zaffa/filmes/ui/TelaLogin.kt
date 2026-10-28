@@ -31,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -233,10 +234,32 @@ fun TelaLogin(modelo: ModeloPrincipal) {
                 }
             }
 
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(14.dp))
+
+            // Caminho garantido. O login nativo monta a requisição a partir dos
+            // campos do formulário, e isso pode não bastar — o painel pode exigir
+            // algo que não enxergamos daqui. Se falhar, o usuário não pode ficar
+            // sem acesso ao app.
+            TextButton(
+                onClick = modelo::entrarPelaPagina,
+                enabled = !estado.ocupado,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    text = "Entrar pela página do painel",
+                    color = Cores.VioletaClaro,
+                )
+            }
             Text(
-                text = "Seus dados ficam apenas neste aparelho. " +
-                    "O app não guarda a sua senha.",
+                text = "Use se o botão acima recusar o seu usuário e senha.",
+                style = MaterialTheme.typography.bodySmall,
+                color = Cores.TextoFraco,
+                textAlign = TextAlign.Center,
+            )
+
+            Spacer(Modifier.height(24.dp))
+            Text(
+                text = "Seus dados ficam apenas neste aparelho.",
                 style = MaterialTheme.typography.bodySmall,
                 color = Cores.TextoFraco,
                 textAlign = TextAlign.Center,
