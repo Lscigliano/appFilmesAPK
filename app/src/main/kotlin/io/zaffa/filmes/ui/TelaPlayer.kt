@@ -133,7 +133,7 @@ fun TelaPlayer(modelo: ModeloPrincipal, titulo: String, url: String) {
     }
 
     // TV e rádio são transmissão contínua: não há barra de progresso nem fim.
-    val aoVivo = remember(url) { io.zaffa.filmes.painel.CapturaDeVideo.ehAoVivo(url) }
+    val aoVivo = remember(url) { url.substringBefore('?').endsWith(".m3u8", ignoreCase = true) }
 
     var controlesVisiveis by remember { mutableStateOf(true) }
     var arrastando by remember { mutableStateOf(false) }
@@ -147,7 +147,7 @@ fun TelaPlayer(modelo: ModeloPrincipal, titulo: String, url: String) {
         }
     }
 
-    BackHandler { modelo.voltarAoPainel() }
+    BackHandler { modelo.voltar() }
 
     Box(
         Modifier
@@ -175,7 +175,7 @@ fun TelaPlayer(modelo: ModeloPrincipal, titulo: String, url: String) {
                 mensagem = mensagem,
                 motorAtual = motorEscolhido,
                 aoTrocarMotor = modelo::trocarMotor,
-                aoVoltar = modelo::voltarAoPainel,
+                aoVoltar = modelo::voltar,
                 modifier = Modifier.align(Alignment.Center),
             )
         }
@@ -187,7 +187,7 @@ fun TelaPlayer(modelo: ModeloPrincipal, titulo: String, url: String) {
                 tocando = estado.tocando,
                 posicaoMs = if (arrastando) valorArrasto else estado.posicaoMs,
                 duracaoMs = estado.duracaoMs,
-                aoVoltar = modelo::voltarAoPainel,
+                aoVoltar = modelo::voltar,
                 aoAlternar = { if (estado.tocando) motor.pausar() else motor.tocar() },
                 aoTrocarMotor = modelo::trocarMotor,
                 deitado = deitado,

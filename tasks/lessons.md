@@ -138,3 +138,22 @@ o usuário consegue sair?" Se a resposta for não, não entregue.
 
 **Regra 2:** em UI escura, "falhou" e "vazio" são visualmente idênticos. Toda tela
 que pode ficar sem conteúdo precisa de estado explícito na tela.
+
+---
+
+## 2026-10-29 — Uma conclusão medida num host não vale para o sistema inteiro
+
+**O erro:** `player_api.php` deu 404 no host do painel, e daí se concluiu
+"este serviço não é Xtream" — para tudo. O projeto passou um dia lendo páginas
+do painel em WebViews escondidos, e abrir filme acabava caindo no site do Core,
+que o dono nunca quis ver.
+
+**O que era de verdade:** o vídeo sempre veio de **outro host**, e ali a API
+Xtream responde com o mesmo usuário e senha. Bastava uma requisição para saber.
+
+**Regra:** anote **onde** cada medição foi feita. Ao ver um host novo no
+tráfego (link de vídeo, redirecionamento, iframe), teste nele as hipóteses que
+foram descartadas no host anterior antes de construir em cima do descarte.
+
+**Regra 2:** o objetivo do dono é o critério. "Funciona, mas às vezes mostra a
+página do painel" não é "funciona" quando o pedido é "abrir apenas o meu app".

@@ -23,6 +23,19 @@ object Padroes {
     const val PAINEL_URL: String = "http://vouver.me/"
 
     /**
+     * Servidor de streaming, que fala o protocolo **Xtream Codes** (XUI 1.5.5).
+     *
+     * É dele que vem tudo o que o app mostra e toca: catálogo completo, séries,
+     * canais e o link do vídeo. O painel acima é só a vitrine web desse mesmo
+     * servidor — o app não precisa mais dele.
+     *
+     * Descoberto em 2026-10-28 lendo a página de detalhe do painel, que traz o
+     * link do vídeo pronto neste host. `player_api.php` aqui responde com
+     * `auth: 1` para o mesmo usuário e senha do painel. Ver docs/DIARIO.md.
+     */
+    const val SERVIDOR_URL: String = "http://crm1.cc"
+
+    /**
      * User-Agent usado em **todas** as requisições do app: WebView, ExoPlayer e
      * libVLC.
      *

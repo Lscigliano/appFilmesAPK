@@ -31,7 +31,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,36 +49,19 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import io.zaffa.filmes.painel.LoginInvisivel
 
 /**
  * Tela de login — nossa, não a do painel.
  *
- * O login continua sendo validado pelo painel; o que é nosso é o formulário e a
- * aparência. Depois de autenticar, a sessão é passada ao WebView, então o
- * catálogo abre já logado.
- *
- * A senha **não é guardada pelo app**: o que persiste é o cookie de sessão do
- * painel. Ver `painel/ClientePainel.kt` e docs/PROTOCOLO.md §2.
+ * Usuário e senha são conferidos direto na API do servidor de streaming
+ * (`player_api.php`, campo `auth`). Se o usuário pedir para lembrar, ficam no
+ * armazenamento privado do app; senão, só na memória enquanto ele está aberto.
+ * Ver `data/Preferencias.kt` e docs/PROTOCOLO.md §2.
  */
 @Composable
 fun TelaLogin(modelo: ModeloPrincipal) {
     val estado by modelo.login.collectAsStateWithLifecycle()
-    val pedido by modelo.pedidoLogin.collectAsStateWithLifecycle()
     var senhaVisivel by remember { mutableStateOf(false) }
-
-    // O WebView invisível que de fato envia o formulário do painel. Fica aqui
-    // porque precisa estar montado na árvore para executar — mas tem 1dp e o
-    // usuário nunca o vê. Ver painel/LoginInvisivel.kt.
-    pedido?.let { p ->
-        LoginInvisivel(
-            urlLogin = p.urlLogin,
-            usuario = p.usuario,
-            senha = p.senha,
-            aoSucesso = modelo::aoLoginConcluido,
-            aoFalhar = modelo::aoLoginFalhou,
-        )
-    }
 
     Box(
         Modifier
@@ -248,29 +230,6 @@ fun TelaLogin(modelo: ModeloPrincipal) {
                     Text("Entrar", fontWeight = FontWeight.Bold)
                 }
             }
-
-            Spacer(Modifier.height(14.dp))
-
-            // Caminho garantido. O login nativo monta a requisição a partir dos
-            // campos do formulário, e isso pode não bastar — o painel pode exigir
-            // algo que não enxergamos daqui. Se falhar, o usuário não pode ficar
-            // sem acesso ao app.
-            TextButton(
-                onClick = modelo::entrarPelaPagina,
-                enabled = !estado.ocupado,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    text = "Entrar pela página do painel",
-                    color = Cores.VioletaClaro,
-                )
-            }
-            Text(
-                text = "Use se o botão acima recusar o seu usuário e senha.",
-                style = MaterialTheme.typography.bodySmall,
-                color = Cores.TextoFraco,
-                textAlign = TextAlign.Center,
-            )
 
             Spacer(Modifier.height(24.dp))
             Text(

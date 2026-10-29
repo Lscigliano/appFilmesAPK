@@ -8,6 +8,59 @@
 
 ---
 
+## [2026-10-29] O servidor de vídeo TEM API Xtream — o app deixa o painel de vez
+**Quem:** Claude Opus 5.5, com o dono pedindo "quero que abra apenas o MEU"
+
+**Situação:** o app lia o painel em WebViews escondidos. Abrir um filme
+mostrava "Preparando o vídeo…", esperava 25 s e caía na página do CorePlay. A
+busca só filtrava a categoria aberta. O dono pediu duas coisas: nunca ver o
+site do Core, e uma busca que ache **qualquer** filme pelo nome na lista inteira.
+
+**Ação:** com a conta do dono (usada só em memória, nada gravado), li a página
+de detalhe de um filme. Ela traz o vídeo pronto num atributo
+`data-stream-url`, no formato Xtream `/movie/<usuário>/<senha>/<id>.mp4` —
+**num host diferente do painel** (`Padroes.SERVIDOR_URL`).
+
+**Resultado (medido, poucas requisições):**
+
+| Teste no servidor de vídeo | Resultado |
+|---|---|
+| `player_api.php` com usuário e senha | **200, `auth: 1`**, XUI 1.5.5, `max_connections: 1` |
+| `get_vod_streams` | 55.066 linhas = **43.024 filmes** únicos, com capa, ano, nota, categoria — 1,7 MB em 2,5 s |
+| `get_series` / `get_live_streams` | 9.782 séries / 3.367 canais (rádios são uma categoria de canais) |
+| `get_series_info` | temporadas e episódios com id e extensão |
+| `/movie/.../<id>.mp4` | **302** → `/vauth/<id>.mp4?token=…` → **206 `video/mp4`** |
+| `/series/.../<id>.mp4` e `/live/.../<id>.m3u8` | **302** para o arquivo/manifesto com token |
+| ids de categoria dos títulos × lista de categorias | **todos batem** |
+
+43.024 é exatamente o número que a busca do próprio painel (`ajax/search.php`)
+devolve — confirmação cruzada de que o acervo da API é o mesmo do site.
+
+**O que mudou:** login, catálogo, busca, séries e TV agora vêm da API
+(`xtream/`). O pacote `painel/` inteiro foi removido. A busca é global: procura
+nos três tipos, sem acento, palavras em qualquer ordem, e a barra de busca do
+catálogo abre essa busca em vez de filtrar a categoria.
+
+**Aprendizado:**
+1. **"Não é Xtream" valia para um host, não para o sistema.** O 404 em
+   `player_api.php` foi medido no painel e generalizado para tudo. O vídeo
+   sempre veio de outro host, e ninguém testou a API **lá**. Quando uma URL
+   aponta para um host novo, teste o protocolo dele antes de descartar.
+2. **Leia o HTML que o servidor manda antes de automatizar cliques nele.** O
+   link estava num atributo da página desde o início; o app clicava em botões
+   por texto para fazê-lo aparecer.
+3. O login do painel por `curl` funcionou de primeira **quando o campo
+   `login=1` foi incluído** — o JavaScript da página o acrescenta no envio. Era
+   provavelmente o que faltava no "login nativo" que recusava senha correta.
+   Não importa mais (o app não usa o painel), mas fica explicado.
+
+**Ainda não provado (N2/N3 pendentes):** compilou aqui (`assembleDebug` ok), mas
+não foi instalado num aparelho. Falta o dono confirmar: login, catálogo,
+busca, filme, episódio de série e canal tocando, e avançar nos dois motores.
+
+---
+
+
 ## [2026-10-28] Fechamento da sessão: de player avulso a app próprio
 **Quem:** Claude Opus 5, com o dono testando cada entrega no aparelho
 

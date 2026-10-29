@@ -19,14 +19,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Tv
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -40,23 +40,26 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import io.zaffa.filmes.xtream.Acervo
 
 /**
  * Tela inicial — a identidade do app.
  *
- * LAYOUT: os cinco atalhos ficam numa **grade que cabe inteira na tela**, sem
+ * LAYOUT: os atalhos ficam numa **grade que cabe inteira na tela**, sem
  * rolagem. A primeira versão usava uma faixa horizontal rolável e, no celular,
  * só dois cartões apareciam — os outros ficavam cortados fora da vista, que foi
  * exatamente a reclamação no primeiro uso real.
  *
- * O catálogo continua sendo a página do painel (decisão do dono): assim as
- * capas, categorias e busca seguem funcionando e atualizadas. O que esta tela
- * entrega é **entrar direto onde se quer**, sem passar pelo menu do site.
+ * Como no painel: o usuário escolhe TV, Filmes ou Séries e, dentro, as
+ * categorias. A barra de busca no topo procura pelo nome em **todo** o
+ * acervo, sem depender de seção ou gênero.
  */
 @Composable
 fun TelaInicio(
     aoEscolher: (Secao) -> Unit,
-    aoAbrirPainel: () -> Unit,
+    aoBuscar: () -> Unit,
+    acervo: Acervo,
+    aoTentarDeNovo: () -> Unit,
     aoSair: () -> Unit,
 ) {
     Box(
@@ -91,9 +94,15 @@ fun TelaInicio(
                 color = Cores.TextoFraco,
             )
 
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(14.dp))
 
-            // Grade de 2 colunas. Com 5 itens, o último ocupa a linha inteira —
+            // Parece um campo de texto, mas só abre a busca geral: digitar
+            // aqui exigiria o índice pronto antes mesmo de o usuário decidir.
+            BarraDeBusca(texto = "Buscar em todos os filmes e séries", aoClicar = aoBuscar)
+
+            Spacer(Modifier.height(14.dp))
+
+            // Grade de 2 colunas. Com 3 itens, o último ocupa a linha inteira —
             // fica equilibrado e não sobra buraco.
             val linhas = Secao.entries.chunked(2)
             linhas.forEachIndexed { indice, linha ->
@@ -114,13 +123,38 @@ fun TelaInicio(
 
             Spacer(Modifier.height(20.dp))
 
-            LinhaDeAcesso(
-                titulo = "Abrir o painel completo",
-                descricao = "Busca, categorias, rádio e tudo o mais",
-                aoClicar = aoAbrirPainel,
-            )
+            when (val estado = acervo.estado) {
+                Acervo.Estado.Carregando, Acervo.Estado.Vazio -> Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(bottom = 12.dp),
+                ) {
+                    CircularProgressIndicator(
+                        color = Cores.Violeta,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Text(
+                        "Carregando o catálogo…",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Cores.TextoFraco,
+                    )
+                }
 
-            Spacer(Modifier.height(8.dp))
+                // Falha precisa ser vista e ter saída: catálogo vazio sem aviso
+                // parece app quebrado (tasks/lessons.md).
+                is Acervo.Estado.Falhou -> {
+                    LinhaDeAcesso(
+                        titulo = "Não consegui carregar o catálogo",
+                        descricao = estado.mensagem + " Toque para tentar de novo.",
+                        icone = Icons.Filled.Refresh,
+                        aoClicar = aoTentarDeNovo,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+
+                Acervo.Estado.Pronto -> Unit
+            }
 
             LinhaDeAcesso(
                 titulo = "Sair da conta",
@@ -235,6 +269,4 @@ private fun iconeDe(secao: Secao): ImageVector = when (secao) {
     Secao.TV -> Icons.Filled.Tv
     Secao.FILMES -> Icons.Filled.Movie
     Secao.SERIES -> Icons.Filled.VideoLibrary
-    Secao.FAVORITOS -> Icons.Filled.Favorite
-    Secao.CONTINUAR -> Icons.Filled.History
 }

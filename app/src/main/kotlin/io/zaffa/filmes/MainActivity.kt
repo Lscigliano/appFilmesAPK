@@ -14,15 +14,15 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import io.zaffa.filmes.painel.TelaPainel
 import io.zaffa.filmes.ui.Cores
 import io.zaffa.filmes.ui.ModeloPrincipal
 import io.zaffa.filmes.ui.Tela
-import io.zaffa.filmes.ui.TelaAbrindo
+import io.zaffa.filmes.ui.TelaBusca
 import io.zaffa.filmes.ui.TelaCatalogo
 import io.zaffa.filmes.ui.TelaInicio
 import io.zaffa.filmes.ui.TelaLogin
 import io.zaffa.filmes.ui.TelaPlayer
+import io.zaffa.filmes.ui.TelaSerie
 import io.zaffa.filmes.ui.TemaFilmes
 
 class MainActivity : ComponentActivity() {
@@ -50,30 +50,36 @@ class MainActivity : ComponentActivity() {
 
                         is Tela.Inicio -> TelaInicio(
                             aoEscolher = modelo::abrirSecao,
-                            aoAbrirPainel = modelo::abrirPainel,
+                            aoBuscar = modelo::abrirBusca,
+                            acervo = modelo.acervo,
+                            aoTentarDeNovo = { modelo.carregarAcervo(forcar = true) },
                             aoSair = modelo::sair,
-                        )
-
-                        is Tela.Abrindo -> TelaAbrindo(
-                            titulo = t.titulo,
-                            urlDetalhe = t.urlDetalhe,
-                            aoCapturar = modelo::aoAbrirCapturado,
-                            aoDesistir = modelo::aoDesistirDeAbrir,
-                            aoVoltar = modelo::voltarAoInicio,
                         )
 
                         is Tela.Catalogo -> TelaCatalogo(
                             secao = t.secao,
-                            aoAbrirItem = { modelo.abrirItem(it.url, it.titulo) },
-                            aoVoltar = modelo::voltarAoInicio,
+                            categoriaId = t.categoriaId,
+                            acervo = modelo.acervo,
+                            aoEscolherCategoria = { modelo.escolherCategoria(t.secao, it) },
+                            aoAbrir = modelo::abrirTitulo,
+                            aoBuscar = modelo::abrirBusca,
+                            aoAtualizar = { modelo.carregarAcervo(forcar = true) },
+                            aoVoltar = modelo::voltar,
                         )
 
-                        is Tela.Painel -> TelaPainel(
-                            urlInicial = t.url,
-                            urlRaiz = t.raiz,
-                            aoCapturarVideo = modelo::aoCapturarVideo,
-                            aoNavegar = modelo::aoNavegarNoPainel,
-                            aoSair = modelo::voltarAoInicio,
+                        is Tela.Busca -> TelaBusca(
+                            acervo = modelo.acervo,
+                            texto = modelo.textoBusca,
+                            aoMudarTexto = { modelo.textoBusca = it },
+                            aoAbrir = modelo::abrirTitulo,
+                            aoVoltar = modelo::voltar,
+                        )
+
+                        is Tela.Serie -> TelaSerie(
+                            serie = t.serie,
+                            carregar = modelo::episodios,
+                            aoAbrirEpisodio = { modelo.abrirEpisodio(t.serie, it) },
+                            aoVoltar = modelo::voltar,
                         )
 
                         is Tela.Player -> TelaPlayer(

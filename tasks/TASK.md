@@ -1,6 +1,6 @@
 # TASK.md — estado do projeto
 
-Atualizado em 2026-10-28, fim da primeira sessão.
+Atualizado em 2026-10-29, segunda sessão (troca do painel pela API Xtream).
 Itens são **verificáveis**. Níveis de prova (N1..N4) em `docs/PROTOCOLO.md`, §5.
 
 ---
@@ -24,6 +24,14 @@ Itens são **verificáveis**. Níveis de prova (N1..N4) em `docs/PROTOCOLO.md`, 
 - [x] TV ao vivo e rádio no nosso player (HLS), com indicador **AO VIVO**
 - [x] Nome do filme no player, em vez do número do arquivo
 
+## 🧪 Sessão 2026-10-29 — compila (N1), falta provar no aparelho
+
+- [x] **N1** — `assembleDebug` passa com a API Xtream no lugar do painel
+- [ ] **N2/N3** — no aparelho: login pela API, catálogo com categorias, busca
+      global ("hobbit" acha a trilogia), filme toca, episódio de série toca,
+      canal de TV toca — **sem nenhuma página do CorePlay aparecer**
+- [ ] **N4** — avançar o filme nos dois motores, agora pelo link direto
+
 ## 🔜 Próximos, por valor no uso diário
 
 - [ ] **Retomar de onde parou.** Hoje o filme sempre recomeça do zero — é a falta
@@ -31,9 +39,8 @@ Itens são **verificáveis**. Níveis de prova (N1..N4) em `docs/PROTOCOLO.md`, 
 - [ ] **Categorias próprias.** O dono quer mover um título de "Ação" para
       "Aventura" no app dele. Agora é viável: o catálogo é nosso, basta guardar
       as marcações dele e aplicá-las por cima das do painel.
-- [ ] **Confirmar Favoritos e Continuar.** Os caminhos são palpite; se falharem,
-      o app cai na raiz do painel e avisa (não trava).
-- [ ] Rádio e TV no **nosso catálogo**, não só no nosso player.
+- [ ] **Favoritos e "Continuar"** guardados no aparelho. Os do painel saíram
+      junto com ele (eram páginas web, e dois caminhos nunca foram confirmados).
 
 ## 📋 Fatos medidos — não re-descubra
 
@@ -46,16 +53,16 @@ Itens são **verificáveis**. Níveis de prova (N1..N4) em `docs/PROTOCOLO.md`, 
 | Token expira? | Não em 34 min | monitor a cada 2 min |
 | Conexões simultâneas do plano | **1** | tela "Meu perfil" do painel |
 | CORS no servidor de vídeo | **`Allow-Origin: *`** | viabiliza o projeto web |
-| Endereços das seções | `livetv`, `movies`, `series` ✅ · `favorites`, `watchhistory` ⚠️ | confirmados pelo dono no navegador |
-| Categorias | `index.php?page=moviecat&id=...` | três amostras do dono |
+| Tem API? | **Sim, no servidor de vídeo** (Xtream/XUI 1.5.5), não no painel | `player_api.php` → `auth: 1` |
+| Tamanho do acervo | 43.024 filmes, 9.782 séries, 3.367 canais | API, confere com a busca do painel |
+| Link de vídeo | `/movie|series|live/<u>/<s>/<id>.<ext>` → 302 com token | `curl -D -` |
 
 ## ⚠️ Armadilhas registradas
 
-1. **O catálogo completo não sai da página principal.** Ela é uma vitrine de 38
-   carrosséis; o acervo está dentro das categorias.
+1. **A API lista cada filme uma vez por categoria.** Junte por `stream_id`
+   (55 mil linhas → 43 mil filmes), senão a busca mostra repetidos.
 2. **Medir `206` não é medir entrega.** Confira bytes recebidos, não só status.
-3. **Não automatize login reconstruindo a requisição.** Use o formulário do
-   painel pelo WebView.
+3. **URL do Xtream leva usuário e senha.** Nunca em log, erro ou `toString()`.
 4. **Nenhum palpite pode levar a tela sem saída.** Ver `tasks/lessons.md`.
 5. **Não compile dentro do OneDrive.** As travas de arquivo quebram o build;
    `settings.gradle.kts` já desvia a saída para fora.

@@ -1,10 +1,15 @@
 # Como o painel entrega as coisas
 
+> 🔁 **Atualização 2026-10-29:** o app **não usa mais o painel**. Fala direto com
+> a API Xtream do servidor de vídeo — seção [API do servidor](#api-do-servidor-xtream)
+> no fim deste arquivo. O resto fica como registro de como o painel funciona.
+
 O que foi **confirmado na prática**. Nada aqui é suposição — cada linha tem
 origem numa medição ou numa amostra que o dono capturou no navegador.
 
 > ⚠️ A versão anterior deste arquivo descrevia o protocolo **Xtream Codes**.
-> **Estava errada.** Este painel não é Xtream: `player_api.php` devolve 404, e o
+> Estava errada **para o host do painel** — mas o servidor de vídeo é Xtream
+> (ver o fim do arquivo). Este painel não é Xtream: `player_api.php` devolve 404, e o
 > ID de título é texto (`oev_z4A`), não número sequencial. Todo o cliente Xtream
 > foi removido do projeto. Ver `docs/DIARIO.md`.
 
@@ -83,3 +88,27 @@ manifesto**, nunca os segmentos `.ts` — eles chegam às centenas por minuto.
 
 O plano tem **máximo de 1 conexão simultânea** (visto em *Meu perfil*). Só uma
 pessoa assiste por vez; isso é do plano, não do app.
+
+## API do servidor (Xtream)
+
+Host em `Padroes.SERVIDOR_URL`. Medido em 2026-10-29 com a conta do dono.
+
+| Chamada | Devolve |
+|---|---|
+| `player_api.php?username=&password=` | `user_info.auth` (1/0), `status`, `max_connections` |
+| `&action=get_vod_categories` / `get_series_categories` / `get_live_categories` | `[{category_id, category_name}]` |
+| `&action=get_vod_streams` | `[{stream_id, name, stream_icon, year, category_id, category_ids, container_extension}]` — **repete o item por categoria** |
+| `&action=get_series` | `[{series_id, name, cover, year, category_id}]` |
+| `&action=get_live_streams` | `[{stream_id, name, stream_icon, category_id}]` — rádios são a categoria `RADIOS` |
+| `&action=get_series_info&series_id=` | `{episodes: {"1": [{id, episode_num, container_extension, info}]}}` |
+
+Reprodução (todas respondem **302** para o arquivo com token):
+
+```
+/movie/<usuário>/<senha>/<stream_id>.<container_extension>
+/series/<usuário>/<senha>/<episódio id>.<container_extension>
+/live/<usuário>/<senha>/<stream_id>.m3u8
+```
+
+O painel também tem `ajax/search.php` (POST com `csrf_token`), que devolve o
+acervo inteiro em nome + id. Não é usado — a API Xtream traz o mesmo com capas.
