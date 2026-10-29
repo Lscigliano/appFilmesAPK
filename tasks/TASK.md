@@ -24,10 +24,10 @@ Itens são **verificáveis**. Níveis de prova (N1..N4) em `docs/PROTOCOLO.md`, 
 - [x] TV ao vivo e rádio no nosso player (HLS), com indicador **AO VIVO**
 - [x] Nome do filme no player, em vez do número do arquivo
 
-## 🧪 Sessão 2026-10-29 — compila (N1), falta provar no aparelho
+## ✅ Sessão 2026-10-29 — API Xtream no lugar do painel
 
 - [x] **N1** — `assembleDebug` passa com a API Xtream no lugar do painel
-- [ ] **N2/N3** — no aparelho: login pela API, catálogo com categorias, busca
+- [x] **N2/N3** — confirmado pelo dono no aparelho ("Funcionou"): login pela API, catálogo com categorias, busca
       global ("hobbit" acha a trilogia), filme toca, episódio de série toca,
       canal de TV toca — **sem nenhuma página do CorePlay aparecer**
 - [ ] **N4** — avançar o filme nos dois motores, agora pelo link direto
