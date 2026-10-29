@@ -8,6 +8,36 @@
 
 ---
 
+## [2026-10-29] Fechamento da sessão: app no aparelho e site no computador
+**Quem:** Claude Opus 5.5, com o dono testando no celular
+
+**Onde o dia terminou:**
+- **APK** (`build-90630af`): login, catálogo, busca global, séries e TV pela API
+  Xtream, sem nenhuma página do CorePlay. **Confirmado pelo dono no aparelho.**
+  Ele também experimentou trocar o motor para VLC (explicado; o UA mascarado
+  segue valendo).
+- **Web** (`appFilmesWEB`, release `v1`): um `index.html` aberto do disco, com a
+  mesma API e a mesma busca. Provado por teste automatizado no Chrome: filme,
+  avanço a 60%, HLS e episódio tocando. Detalhes no diário de lá.
+
+**Fatos novos que valem para os dois projetos:**
+- O servidor **não tem HTTPS**, então nenhum site publicado consegue usá-lo. O
+  app Android não é afetado (cleartext já liberado).
+- A API reflete qualquer `Origin` em CORS, mas responde 404 a `OPTIONS`: no
+  navegador, só GET simples.
+
+**Máquina de desenvolvimento:** este PC (fora do OneDrive) agora tem JDK 17
+(Temurin) e Android SDK com `platforms;android-37`, `build-tools;36.0.0` e
+`platform-tools` (adb). `assembleDebug` leva ~2,5 min do zero.
+
+**Para a próxima sessão, por valor:**
+1. Retomar de onde parou **no APK** (o site já faz; mesma ideia por id).
+2. Favoritos guardados no aparelho e no navegador.
+3. Confirmar no aparelho o avanço nos dois motores pelo link direto (N4 da API).
+
+---
+
+
 ## [2026-10-29] O servidor de vídeo TEM API Xtream — o app deixa o painel de vez
 **Quem:** Claude Opus 5.5, com o dono pedindo "quero que abra apenas o MEU"
 
