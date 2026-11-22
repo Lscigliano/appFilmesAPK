@@ -41,6 +41,10 @@ compose-material-icons-extended = { module = "androidx.compose.material:material
 media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
 media3-exoplayer-hls = { module = "androidx.media3:media3-exoplayer-hls", version.ref = "media3" }
 media3-ui = { module = "androidx.media3:media3-ui", version.ref = "media3" }
+# Google Cast (Chromecast). Na MESMA versão do media3: traz o RemoteCastPlayer, o
+# botão de Cast em Compose e, por dependência, play-services-cast-framework 22.3.1
+# e mediarouter 1.8.1 (conferido no .pom em 2026-11-22).
+media3-cast = { module = "androidx.media3:media3-cast", version.ref = "media3" }
 
 libvlc = { module = "org.videolan.android:libvlc-all", version.ref = "libvlc" }
 

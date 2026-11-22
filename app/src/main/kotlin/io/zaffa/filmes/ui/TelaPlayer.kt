@@ -56,7 +56,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.key
+import androidx.media3.cast.Cast
+import androidx.media3.cast.MediaRouteButton
+import androidx.media3.cast.RemoteCastPlayer
+import androidx.media3.cast.SessionAvailabilityListener
 import io.zaffa.filmes.player.Motor
+import io.zaffa.filmes.player.MotorCast
 import io.zaffa.filmes.player.MotorExo
 import io.zaffa.filmes.player.MotorVideo
 import io.zaffa.filmes.player.MotorVlc
@@ -79,10 +87,34 @@ fun TelaPlayer(modelo: ModeloPrincipal, titulo: String, url: String) {
     // Sobrevive à troca de motor de propósito: é o que preserva o ponto do filme.
     val posicaoPreservada = remember { mutableLongStateOf(0L) }
 
-    val motor: MotorVideo = remember(motorEscolhido) {
-        when (motorEscolhido) {
-            Motor.EXOPLAYER -> MotorExo(contexto)
-            Motor.VLC -> MotorVlc(contexto)
+    // Google Cast. O player remoto vive a tela inteira (não só enquanto
+    // transmite), porque é ele quem avisa que a TV conectou ou desconectou.
+    val remoto = remember { runCatching { RemoteCastPlayer.Builder(contexto).build() }.getOrNull() }
+    var naTv by remember { mutableStateOf(remoto?.isCastSessionAvailable == true) }
+    DisposableEffect(remoto) {
+        remoto?.setSessionAvailabilityListener(object : SessionAvailabilityListener {
+            override fun onCastSessionAvailable() { naTv = true }
+            override fun onCastSessionUnavailable() { naTv = false }
+        })
+        onDispose {
+            // Sair do player para a TV também. Senão o filme seguiria tocando
+            // lá sem nenhuma tela no app para controlá-lo.
+            remoto?.run {
+                if (isCastSessionAvailable) stop()
+                setSessionAvailabilityListener(null)
+                release()
+            }
+        }
+    }
+
+    // Conectar na TV é uma troca de motor como ExoPlayer ⇄ VLC: o motor atual é
+    // liberado e o novo abre na posição preservada. Desconectar volta ao
+    // celular no ponto em que a TV estava.
+    val motor: MotorVideo = remember(motorEscolhido, naTv) {
+        when {
+            naTv && remoto != null -> MotorCast(remoto, titulo)
+            motorEscolhido == Motor.VLC -> MotorVlc(contexto)
+            else -> MotorExo(contexto)
         }
     }
 
@@ -139,9 +171,11 @@ fun TelaPlayer(modelo: ModeloPrincipal, titulo: String, url: String) {
     var arrastando by remember { mutableStateOf(false) }
     var valorArrasto by remember { mutableLongStateOf(0L) }
 
-    // Some com os controles sozinho, como qualquer player.
-    LaunchedEffect(controlesVisiveis, estado.tocando) {
-        if (controlesVisiveis && estado.tocando) {
+    // Some com os controles sozinho, como qualquer player — menos durante o
+    // Cast: aí não há vídeo na tela, e o celular É o controle remoto.
+    LaunchedEffect(controlesVisiveis, estado.tocando, naTv) {
+        if (naTv) controlesVisiveis = true
+        if (controlesVisiveis && estado.tocando && !naTv) {
             delay(4_000)
             controlesVisiveis = false
         }
@@ -158,10 +192,15 @@ fun TelaPlayer(modelo: ModeloPrincipal, titulo: String, url: String) {
                 indication = null,
             ) { controlesVisiveis = !controlesVisiveis },
     ) {
-        AndroidView(
-            factory = { ctx -> motor.criarView(ctx) },
-            modifier = Modifier.fillMaxSize(),
-        )
+        // key(motor): o AndroidView só chama a factory uma vez. Sem a chave, ao
+        // trocar de motor a view do motor ANTIGO continuava na tela e o novo
+        // nunca ganhava onde desenhar (VLC e Cast mostrariam tela preta).
+        key(motor) {
+            AndroidView(
+                factory = { ctx -> motor.criarView(ctx) },
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
 
         if (estado.carregando && estado.erro == null) {
             CircularProgressIndicator(
@@ -174,6 +213,8 @@ fun TelaPlayer(modelo: ModeloPrincipal, titulo: String, url: String) {
             PainelDeErro(
                 mensagem = mensagem,
                 motorAtual = motorEscolhido,
+                naTv = naTv,
+                aoSairDaTv = { Cast.getSingletonInstance(contexto).endCurrentSession(true) },
                 aoTrocarMotor = modelo::trocarMotor,
                 aoVoltar = modelo::voltar,
                 modifier = Modifier.align(Alignment.Center),
@@ -184,6 +225,7 @@ fun TelaPlayer(modelo: ModeloPrincipal, titulo: String, url: String) {
             Controles(
                 titulo = titulo,
                 motorAtual = motorEscolhido,
+                naTv = naTv,
                 tocando = estado.tocando,
                 posicaoMs = if (arrastando) valorArrasto else estado.posicaoMs,
                 duracaoMs = estado.duracaoMs,
@@ -209,6 +251,8 @@ fun TelaPlayer(modelo: ModeloPrincipal, titulo: String, url: String) {
 private fun PainelDeErro(
     mensagem: String,
     motorAtual: Motor,
+    naTv: Boolean,
+    aoSairDaTv: () -> Unit,
     aoTrocarMotor: () -> Unit,
     aoVoltar: () -> Unit,
     modifier: Modifier = Modifier,
@@ -226,18 +270,23 @@ private fun PainelDeErro(
             style = MaterialTheme.typography.bodyLarge,
         )
         Spacer(Modifier.height(16.dp))
-        Button(onClick = aoTrocarMotor) {
-            Icon(Icons.Filled.SwapHoriz, contentDescription = null)
-            Spacer(Modifier.width(8.dp))
-            Text("Usar motor ${motorAtual.outro().rotulo}")
+        if (naTv) {
+            // A TV falhou: a saída é voltar para o celular, na mesma posição.
+            Button(onClick = aoSairDaTv) { Text("Assistir no celular") }
+        } else {
+            Button(onClick = aoTrocarMotor) {
+                Icon(Icons.Filled.SwapHoriz, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Usar motor ${motorAtual.outro().rotulo}")
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = motorAtual.outro().explicacao,
+                color = Cores.TextoFraco,
+                textAlign = TextAlign.Center,
+                style = MaterialTheme.typography.bodySmall,
+            )
         }
-        Spacer(Modifier.height(8.dp))
-        Text(
-            text = motorAtual.outro().explicacao,
-            color = Cores.TextoFraco,
-            textAlign = TextAlign.Center,
-            style = MaterialTheme.typography.bodySmall,
-        )
         Spacer(Modifier.height(12.dp))
         Button(onClick = aoVoltar) { Text("Voltar ao catálogo") }
     }
@@ -247,6 +296,7 @@ private fun PainelDeErro(
 private fun Controles(
     titulo: String,
     motorAtual: Motor,
+    naTv: Boolean,
     tocando: Boolean,
     posicaoMs: Long,
     duracaoMs: Long,
@@ -283,14 +333,22 @@ private fun Controles(
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f),
             )
-            IconButton(onClick = aoGirar) {
-                Icon(
-                    imageVector = if (deitado) Icons.Filled.FullscreenExit else Icons.Filled.Fullscreen,
-                    contentDescription = if (deitado) "Sair da tela cheia" else "Tela cheia",
-                    tint = Cores.Texto,
-                )
+            // O mesmo botão do YouTube: toca, escolhe a TV, e o filme passa a
+            // tocar nela. Tocar de novo mostra a TV conectada e "parar".
+            CompositionLocalProvider(LocalContentColor provides Cores.Texto) {
+                MediaRouteButton(Modifier.size(48.dp))
             }
-            AssistChip(
+            if (!naTv) {
+                IconButton(onClick = aoGirar) {
+                    Icon(
+                        imageVector = if (deitado) Icons.Filled.FullscreenExit else Icons.Filled.Fullscreen,
+                        contentDescription = if (deitado) "Sair da tela cheia" else "Tela cheia",
+                        tint = Cores.Texto,
+                    )
+                }
+            }
+            // Durante o Cast quem decodifica é a TV; o motor do celular não importa.
+            if (!naTv) AssistChip(
                 onClick = aoTrocarMotor,
                 label = { Text(motorAtual.rotulo) },
                 leadingIcon = { Icon(Icons.Filled.SwapHoriz, contentDescription = null) },

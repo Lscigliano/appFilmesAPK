@@ -1,6 +1,9 @@
 package io.zaffa.filmes
 
 import android.app.Application
+import androidx.media3.cast.Cast
+import androidx.media3.cast.CastParams
+import com.google.android.gms.cast.CastMediaControlIntent
 import io.zaffa.filmes.data.Preferencias
 import io.zaffa.filmes.xtream.Acervo
 import io.zaffa.filmes.xtream.ApiXtream
@@ -27,5 +30,18 @@ class FilmesApp : Application() {
     override fun onCreate() {
         super.onCreate()
         preferencias = Preferencias(this)
+
+        // Google Cast, para o botão de transmitir para a TV. O receptor é o
+        // Default Media Receiver do Google: roda em qualquer Chromecast,
+        // inclusive os antigos, sem precisarmos publicar um receptor nosso.
+        // Aparelho sem Google Play Services não tem Cast — o app segue normal,
+        // e o botão simplesmente não acha TV nenhuma.
+        runCatching {
+            Cast.getSingletonInstance(this).initialize(
+                CastParams.Builder()
+                    .setReceiverApplicationId(CastMediaControlIntent.DEFAULT_MEDIA_RECEIVER_APPLICATION_ID)
+                    .build(),
+            )
+        }
     }
 }

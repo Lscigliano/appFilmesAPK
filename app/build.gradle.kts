@@ -102,6 +102,9 @@ dependencies {
     implementation(libs.media3.exoplayer.hls)
     implementation(libs.media3.ui)
 
+    // Espelhar na TV — Chromecast, o mesmo botão do YouTube
+    implementation(libs.media3.cast)
+
     // Login nativo e leitura do HTML do painel
     implementation(libs.okhttp)
     implementation(libs.jsoup)

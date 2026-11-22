@@ -32,6 +32,16 @@ Itens são **verificáveis**. Níveis de prova (N1..N4) em `docs/PROTOCOLO.md`, 
       canal de TV toca — **sem nenhuma página do CorePlay aparecer**
 - [ ] **N4** — avançar o filme nos dois motores, agora pelo link direto
 
+## 📺 Chromecast (2026-11-22) — compila (N1), falta a TV
+
+- [x] **N1** — botão de Cast no player; `assembleDebug` ok
+- [ ] **N3 na TV** — tocar o ícone, escolher o Chromecast: **filme** toca na TV
+      e pausar/avançar 30 s/barra comandam a TV
+- [ ] **TV ao vivo** no Chromecast (HLS por HTTP — a hipótese mais incerta)
+- [ ] Desconectar volta para o celular **no mesmo ponto**
+- [ ] Trocar ExoPlayer ⇄ VLC no meio do filme mostra imagem (corrigido com
+      `key(motor)`, ainda não visto no aparelho)
+
 ## 🔜 Próximos, por valor no uso diário
 
 - [ ] **Retomar de onde parou.** Hoje o filme sempre recomeça do zero — é a falta

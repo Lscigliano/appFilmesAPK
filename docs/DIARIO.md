@@ -8,6 +8,46 @@
 
 ---
 
+## [2026-11-22] Botão de transmitir para a TV (Chromecast), o mesmo do YouTube
+**Quem:** Claude Opus 5.5, a pedido do dono (TV antiga com Chromecast)
+
+**Situação:** o dono quer o ícone de Cast do YouTube no player, para o filme
+passar a tocar na TV com o celular como controle.
+
+**Ação:** `media3-cast` 1.11.1, na mesma versão do Media3 que o projeto já usa.
+O Cast entrou como **terceiro motor** (`player/MotorCast.kt`), com o mesmo
+contrato do ExoPlayer e do VLC. Conectar e desconectar na TV é uma troca de
+motor, e a posição do filme é preservada nos dois sentidos. O receptor é o
+**Default Media Receiver** do Google, que roda em qualquer Chromecast.
+
+**O que surpreendeu (lido nos binários antes de escrever, não de memória):**
+1. O Media3 1.11 já traz um **botão de Cast em Compose** (`MediaRouteButton`) e
+   `Cast.initialize(CastParams)`, que monta o `CastContext` **sem**
+   `OptionsProvider` no manifest e sem `FragmentActivity`.
+2. O seletor de TVs é diálogo AppCompat, e o tema do app não é. Não quebra:
+   `resolveDialogTheme` cai num tema AppCompat próprio quando o tema do app não
+   define `colorPrimary` do AppCompat (conferido no bytecode).
+3. **Defeito antigo achado lendo o player:** o `AndroidView` só chama a
+   `factory` uma vez. Ao trocar de motor no meio do filme, a view do motor
+   antigo ficava na tela e o novo não ganhava onde desenhar. Provável efeito:
+   tela preta ao trocar para VLC. O dono não relatou isso; a leitura do código
+   é que mostra. Corrigido com `key(motor)`.
+
+**Resultado:** N1 (`assembleDebug` ok). **Nada testado num Chromecast**: não há
+TV aqui.
+
+**Hipóteses que o teste do dono vai confirmar ou derrubar:**
+- Filme (MP4 por HTTP) deve tocar: o `<video>` do Chromecast segue o 302 e o
+  servidor manda CORS `*`.
+- **TV ao vivo (HLS por HTTP) é a mais incerta:** o receptor roda em HTTPS e
+  busca HLS por XHR, o que pode ser barrado como conteúdo misto. Se falhar, a
+  tela mostra o erro e o botão "Assistir no celular", que volta para o celular
+  no mesmo ponto. Plano B: resolver o 302 no celular e mandar o link final.
+- Títulos HEVC/4K podem não tocar em Chromecast antigo (decodificador da TV).
+
+---
+
+
 ## [2026-10-29] Fechamento da sessão: app no aparelho e site no computador
 **Quem:** Claude Opus 5.5, com o dono testando no celular
 

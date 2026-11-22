@@ -42,7 +42,8 @@ app/src/main/kotlin/io/zaffa/filmes/
 ├── player/                    A razão do projeto existir
 │   ├── MotorVideo.kt          Contrato comum aos dois motores
 │   ├── MotorExo.kt            ExoPlayer, com recuperação automática
-│   └── MotorVlc.kt            libVLC, idem
+│   ├── MotorVlc.kt            libVLC, idem
+│   └── MotorCast.kt           Chromecast: toca na TV, celular vira controle
 ├── data/Preferencias.kt       Motor escolhido, credenciais lembradas
 ├── ui/                        Compose: Login, Início, Catálogo, Busca, Série, Player
 ├── FilmesApp.kt               Container de dependências, feito à mão
@@ -82,6 +83,16 @@ Aqui a troca é um toque, **sem perder a posição do filme**.
 ⚠️ **O User-Agent nunca pode conter "VLC"**: o servidor de vídeo responde
 **HTTP 500** a ele. Está centralizado em `Padroes.USER_AGENT`, com a medição
 junto ao código. Remover isso torna o vídeo impossível de tocar.
+
+### Chromecast é um terceiro motor
+O botão de Cast (o mesmo do YouTube) fica na barra do player. Com a TV
+conectada, `TelaPlayer` troca o motor por `MotorCast`, do mesmo jeito que
+troca ExoPlayer ⇄ VLC, e a posição é preservada. O `RemoteCastPlayer` pertence
+à tela, porque é ele que avisa a conexão e a desconexão. Sair do player para a
+reprodução na TV.
+
+⚠️ O `AndroidView` do vídeo fica dentro de `key(motor)`. Sem isso, trocar de
+motor mantinha a view do motor antigo.
 
 ### Recuperação automática no player
 Falhou depois de um avanço? O player reabre o fluxo na mesma posição, até 5 vezes
